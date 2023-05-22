@@ -211,7 +211,7 @@ fn main() {
 		if result.is_err() {
 			println!("[ERROR] {}", result.err().unwrap());
 		}
-		return;
+		std::process::exit(1);
 	}
 
 	// Parse arguments.
@@ -225,13 +225,13 @@ fn main() {
 	let result = options.parse(args);
 	if result.is_err() {
 		eprint!("{}", options.usage(""));
-		return;
+		std::process::exit(1);
 	}
 	let input = result.unwrap();
 
 	if input.opt_present("help") {
 		eprint!("{}", options.usage(""));
-		return;
+		std::process::exit(1);
 	}
 
 	// Get arguments.
@@ -244,6 +244,6 @@ fn main() {
 	let result = gh_release_create(&title, &target, &notes, files);
 	if result.is_err() {
 		println!("[ERROR] {}", result.err().unwrap());
-		return;
+		std::process::exit(1);
 	}
 }
