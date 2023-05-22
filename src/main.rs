@@ -92,7 +92,7 @@ fn gh_release_create(title: &str, branch_name: &str, notes: &str, files: Vec<Str
 	// RELEASE TITLE
 	params.push("--title");
 	let release_title = if title == "" {
-		let value = format!("release {}", get_current_timestamp());
+		let value = format!("{}, release, {}", &next_tag, get_current_timestamp());
 		value
 	} else {
 		title.to_string()
