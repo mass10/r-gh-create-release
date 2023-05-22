@@ -164,13 +164,18 @@ fn make_publish() -> Result<(), Box<dyn std::error::Error>> {
 
 	println!("[INFO] PUBLISHING...");
 
+	let crate_version = env!("CARGO_PKG_VERSION");
+
 	execute_command(&[
 		"cmd.exe",
 		"/C",
 		"cargo.exe",
 		"run",
 		"--quiet",
+		"--release",
 		"--",
+		"--title",
+		&crate_version,
 		"--file",
 		"target\\release\\r-gh-create-release.exe",
 	])?;
