@@ -1,5 +1,5 @@
 [package]
-name = "rcreate-release"
+name = "r-gh-create-release"
 version = "0.1.0"
 edition = "2021"
 
