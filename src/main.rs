@@ -36,14 +36,17 @@ fn get_gh_current_tag() -> Result<String, Box<dyn std::error::Error>> {
 
 	for line in &lines {
 		let line = line.trim();
+
+		println!("> {}", line);
+
 		if !line.contains("Latest") {
-			println!("[DEBUG] ignored line: [{}] (no latest)", line);
+			println!("[DEBUG] ignored. (no latest)");
 			continue;
 		}
 
 		let items: Vec<&str> = line.split("\t").collect();
 		if items.len() < 3 {
-			println!("[DEBUG] ignored line: [{}] (invalid number of fields)", line);
+			println!("[DEBUG] ignored. (invalid number of fields {})", items.len());
 			continue;
 		}
 
