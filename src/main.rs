@@ -1,5 +1,5 @@
-///
-pub fn magenta<T: std::fmt::Display>(s: T) -> String {
+/// Print text in green.
+pub fn green<T: std::fmt::Display>(s: T) -> String {
 	return format!("\x1b[32m{}\x1b[0m", s);
 }
 
@@ -12,7 +12,7 @@ pub fn get_current_timestamp() -> String {
 /// Execute command in shell.
 fn execute_command(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
 	let string = args.join(" ");
-	println!("{}", magenta(format!("> {}", string)));
+	println!("{}", green(format!("> {}", string)));
 
 	let mut command = std::process::Command::new("cmd.exe");
 	let result = command.args(&["/C"]).args(args).spawn()?.wait()?;
@@ -28,7 +28,7 @@ fn execute_command(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
 
 /// Retrieve latest tag from gh command.
 fn get_gh_current_tag() -> Result<String, Box<dyn std::error::Error>> {
-	println!("{}", magenta("> gh release list"));
+	println!("{}", green("> gh release list"));
 
 	let mut command = std::process::Command::new("cmd.exe");
 	let result = command.args(&["/C"]).args(&["gh", "release", "list"]).output()?;
@@ -45,7 +45,7 @@ fn get_gh_current_tag() -> Result<String, Box<dyn std::error::Error>> {
 	for line in &lines {
 		let line = line.trim();
 
-		println!("{}", magenta(format!("> {}", line)));
+		println!("{}", green(format!("> {}", line)));
 
 		if !line.contains("Latest") {
 			println!("[DEBUG] ignored. (no latest)");
