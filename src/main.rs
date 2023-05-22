@@ -4,62 +4,69 @@ pub fn get_current_timestamp() -> String {
 }
 
 /// システムのシェルを利用してコマンドを実行します。
-fn execute_command(command: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
-	let string = command.join(" ");
+fn execute_command(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
+	let string = args.join(" ");
 	println!("> {}", string);
-	let result = std::process::Command::new("cmd").args(&["/C"]).args(command).output()?;
-	if !result.status.success() {
-		let code = result.status.code().unwrap();
-		eprintln!("error: {}", code);
-		return Err("".into());
+
+	let mut command = std::process::Command::new("cmd.exe");
+	let result = command.args(&["/C"]).args(args).spawn()?.wait()?;
+	if !result.success() {
+		let code = result.code().unwrap();
+		println!("[error] process exited with code: {}", code);
+		return Err("コマンドは正常終了しませんでした。".into());
 	}
-	eprint!("process exited with code: {}", result.status.code().unwrap());
+
+	println!("[DEBUG] process exited with code: {}", result.code().unwrap());
 	return Ok(());
 }
 
 /// Latest のタグを取得します。
 fn get_gh_current_tag() -> Result<String, Box<dyn std::error::Error>> {
-	let result = std::process::Command::new("cmd").args(&["/C"]).args(&["gh", "release", "list"]).output()?;
+	let mut command = std::process::Command::new("cmd.exe");
+	let result = command.args(&["/C"]).args(&["gh", "release", "list"]).output()?;
 	if !result.status.success() {
 		let code = result.status.code().unwrap();
-		eprintln!("[error] error: {}", code);
-		return Err("".into());
+		println!("[ERROR] process exited with exit code: [{}]", code);
+		return Err("コマンドは正常終了しませんでした。".into());
 	}
 
 	let stdout = String::from_utf8(result.stdout)?;
 	let lines: Vec<&str> = stdout.split("\r\n").collect();
-	if lines.len() < 2 {
-		return Err("".into());
+	if lines.len() < 1 {
+		println!("[DEBUG] no release found.");
+		return Ok("".to_string());
 	}
 
-	let line = lines[1];
+	let line = lines[0];
 	let items: Vec<&str> = line.split("\t").collect();
 	if items.len() < 2 {
-		return Err("".into());
+		return Err("フィールド数がおかしい".into());
 	}
 
-	let tag = items[0];
+	let tag = items[2];
+	println!("[DEBUG] Latest release tagged as [{}].", tag);
+
 	return Ok(tag.to_string());
 }
 
 fn gh_release_create(title: &str, branch_name: &str, notes: &str, files: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
 	// gh release create v0.3 --target main --generate-notes "bin\Release\LocalStoreExample1.exe"
-	println!("[debug] files: {:?}", files);
+	println!("[DEBUG] files: {:?}", files);
 
 	let mut params: Vec<&str> = vec!["gh", "release", "create"];
 
 	// TAG
-	println!("[debug] analyzing current tags...");
-	let tag = get_gh_current_tag()?;
-	println!("[debug] current tag: {}", tag);
-	if !tag.starts_with("v") {
-		eprint!("invalid tag: {}", tag);
-		return Err("".into());
+	let mut tag = get_gh_current_tag()?;
+	if tag == "" {
+		tag = "v0".to_string()
+	} else if !tag.starts_with("v") {
+		tag = "v0".to_string()
 	}
-	println!("[debug] current tag: {}", tag);
 	let current_build_number: u32 = tag[1..].parse()?;
 	let next_tag = format!("v{}", current_build_number + 1);
 	params.push(&next_tag);
+
+	println!("[DEBUG] creating next tag: [{}]", &next_tag);
 
 	// RELEASE TITLE
 	params.push("--title");
@@ -78,8 +85,7 @@ fn gh_release_create(title: &str, branch_name: &str, notes: &str, files: Vec<Str
 	} else if branch_name == "main" {
 		params.push("--target");
 		params.push("main");
-	}
-	else {
+	} else {
 		params.push("--target");
 		params.push(&branch_name);
 	}
@@ -96,6 +102,8 @@ fn gh_release_create(title: &str, branch_name: &str, notes: &str, files: Vec<Str
 	for file in &files {
 		params.push(&file);
 	}
+
+	println!("[DEBUG] calling gh command.");
 
 	execute_command(&params)?;
 
@@ -119,7 +127,53 @@ impl StringParam for getopts::Matches {
 	}
 }
 
+fn make_publish() -> Result<(), Box<dyn std::error::Error>> {
+	println!("[INFO] BUILDING...");
+	execute_command(&["cmd.exe", "/C", "cargo.exe", "build", "--quiet", "--release"])?;
+
+	println!("[INFO] PUBLISHING...");
+	execute_command(&[
+		"cmd.exe",
+		"/C",
+		"cargo.exe",
+		"run",
+		"--quiet",
+		"--",
+		"--file",
+		"target\\release\\r-gh-create-release.exe",
+	])?;
+
+	return Ok(());
+}
+
+trait StringUtility {
+	fn at(&self, index: usize) -> &str;
+}
+
+impl StringUtility for Vec<String> {
+	fn at(&self, index: usize) -> &str {
+		if self.len() <= index {
+			return "";
+		}
+		return &self[index];
+	}
+}
+
 fn main() {
+	let args: Vec<String> = std::env::args().skip(1).collect();
+
+	// 第一引数
+	let first_request = args.at(0);
+
+	if first_request == "--publish" {
+		// 自分自身をビルドしてリリース
+		let result = make_publish();
+		if result.is_err() {
+			println!("[ERROR] {}", result.err().unwrap());
+		}
+		return;
+	}
+
 	let mut options = getopts::Options::new();
 	options.optflag("h", "help", "usage");
 	options.opt("", "notes", "string", "STRING", getopts::HasArg::Yes, getopts::Occur::Optional);
@@ -127,7 +181,7 @@ fn main() {
 	options.opt("", "branch", "string", "STRING", getopts::HasArg::Yes, getopts::Occur::Optional);
 	options.opt("", "file", "string", "STRING", getopts::HasArg::Yes, getopts::Occur::Optional);
 
-	let result = options.parse(std::env::args().skip(1));
+	let result = options.parse(args);
 	if result.is_err() {
 		eprint!("{}", options.usage(""));
 		return;
@@ -161,9 +215,7 @@ fn main() {
 
 	let result = gh_release_create(&title, &branch_name, &notes, files);
 	if result.is_err() {
-		eprintln!("{}", result.err().unwrap());
+		println!("[ERROR] {}", result.err().unwrap());
 		return;
 	}
 }
-
-// cargo run -- target\release\rcreate-release.exe
