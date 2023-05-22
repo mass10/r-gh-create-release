@@ -20,7 +20,7 @@ fn execute_command(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
 	return Ok(());
 }
 
-/// Latest のタグを取得します。
+/// Retrieve latest tag from gh command.
 fn get_gh_current_tag() -> Result<String, Box<dyn std::error::Error>> {
 	let mut command = std::process::Command::new("cmd.exe");
 	let result = command.args(&["/C"]).args(&["gh", "release", "list"]).output()?;
@@ -69,8 +69,8 @@ fn parse_uint(text: &str) -> u32 {
 	return number;
 }
 
-fn gh_release_create(title: &str, branch_name: &str, notes: &str, files: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
-	// gh release create v0.3 --target main --generate-notes "bin\Release\LocalStoreExample1.exe"
+/// Launch gh command to create release.
+fn gh_release_create(title: &str, target: &str, notes: &str, files: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
 	println!("[DEBUG] files: {:?}", files);
 
 	let mut params: Vec<&str> = vec!["gh", "release", "create"];
@@ -89,7 +89,7 @@ fn gh_release_create(title: &str, branch_name: &str, notes: &str, files: Vec<Str
 
 	println!("[DEBUG] creating next tag: [{}]", &next_tag);
 
-	// RELEASE TITLE
+	// title
 	params.push("--title");
 	let release_title = if title == "" {
 		let value = format!("{}, release, {}", &next_tag, get_current_timestamp());
@@ -99,16 +99,16 @@ fn gh_release_create(title: &str, branch_name: &str, notes: &str, files: Vec<Str
 	};
 	params.push(&release_title);
 
-	// BRANCH (TODO: ※draft を考慮)
-	if branch_name == "" {
+	// branch (TODO: ※Recognize draft release)
+	if target == "" {
 		params.push("--target");
 		params.push("main");
-	} else if branch_name == "main" {
+	} else if target == "main" {
 		params.push("--target");
 		params.push("main");
 	} else {
 		params.push("--target");
-		params.push(&branch_name);
+		params.push(&target);
 	}
 
 	// RELEASE NOTES
@@ -151,9 +151,11 @@ impl MatchHelper for getopts::Matches {
 /// create release to publish.
 fn make_publish() -> Result<(), Box<dyn std::error::Error>> {
 	println!("[INFO] BUILDING...");
+
 	execute_command(&["cmd.exe", "/C", "cargo.exe", "build", "--quiet", "--release"])?;
 
 	println!("[INFO] PUBLISHING...");
+
 	execute_command(&[
 		"cmd.exe",
 		"/C",
@@ -183,14 +185,15 @@ impl StringUtility for Vec<String> {
 	}
 }
 
+/// Entrypoint of Rust application.
 fn main() {
 	let args: Vec<String> = std::env::args().skip(1).collect();
 
-	// 第一引数
+	// Retrieve the first argument.
 	let first_request = args.at(0);
 
 	if first_request == "--publish" {
-		// 自分自身をビルドしてリリース
+		// Build self, and make publish.
 		let result = make_publish();
 		if result.is_err() {
 			println!("[ERROR] {}", result.err().unwrap());
@@ -198,12 +201,13 @@ fn main() {
 		return;
 	}
 
+	// Parse arguments.
 	let mut options = getopts::Options::new();
 	options.optflag("h", "help", "usage");
 	options.opt("", "notes", "string", "STRING", getopts::HasArg::Yes, getopts::Occur::Optional);
 	options.opt("", "title", "string", "STRING", getopts::HasArg::Yes, getopts::Occur::Optional);
-	options.opt("", "branch", "string", "STRING", getopts::HasArg::Yes, getopts::Occur::Optional);
-	options.opt("", "file", "string", "STRING", getopts::HasArg::Yes, getopts::Occur::Optional);
+	options.opt("", "target", "string", "STRING", getopts::HasArg::Yes, getopts::Occur::Optional);
+	options.opt("", "file", "string", "ARRAY", getopts::HasArg::Yes, getopts::Occur::Multi);
 
 	let result = options.parse(args);
 	if result.is_err() {
@@ -216,13 +220,15 @@ fn main() {
 		eprint!("{}", options.usage(""));
 		return;
 	}
+
+	// Get arguments.
 	let title = input.get_string("title");
-	let branch_name = input.get_string("branch");
+	let target = input.get_string("target");
 	let notes = input.get_string("notes");
 	let files: Vec<String> = if input.opt_present("file") { input.opt_strs("file") } else { vec![] };
 
-	// CREATE RELEASE
-	let result = gh_release_create(&title, &branch_name, &notes, files);
+	// Create release.
+	let result = gh_release_create(&title, &target, &notes, files);
 	if result.is_err() {
 		println!("[ERROR] {}", result.err().unwrap());
 		return;
