@@ -174,7 +174,7 @@ dependencies = [
 
 [[package]]
 name = "r-gh-create-release"
-version = "0.1.0"
+version = "16.0.0"
 dependencies = [
  "chrono",
  "getopts",
