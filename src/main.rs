@@ -49,6 +49,15 @@ fn get_gh_current_tag() -> Result<String, Box<dyn std::error::Error>> {
 	return Ok(tag.to_string());
 }
 
+fn parse_uint(text: &str) -> u32 {
+	let number: Result<u32, _> = text.parse();
+	if number.is_err() {
+		return 0;
+	}
+	let number = number.unwrap();
+	return number;
+}
+
 fn gh_release_create(title: &str, branch_name: &str, notes: &str, files: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
 	// gh release create v0.3 --target main --generate-notes "bin\Release\LocalStoreExample1.exe"
 	println!("[DEBUG] files: {:?}", files);
@@ -62,7 +71,8 @@ fn gh_release_create(title: &str, branch_name: &str, notes: &str, files: Vec<Str
 	} else if !tag.starts_with("v") {
 		tag = "v0".to_string()
 	}
-	let current_build_number: u32 = tag[1..].parse()?;
+
+	let current_build_number: u32 = parse_uint(&tag[1..]);
 	let next_tag = format!("v{}", current_build_number + 1);
 	params.push(&next_tag);
 
