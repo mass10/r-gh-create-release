@@ -1,0 +1,21 @@
+name: Publish release
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 1
+
+    - name: Create the app package
+      run: cargo run -- --publish
