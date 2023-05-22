@@ -131,11 +131,11 @@ fn gh_release_create(title: &str, branch_name: &str, notes: &str, files: Vec<Str
 	return Ok(());
 }
 
-trait StringParam {
+trait MatchHelper {
 	fn get_string(&self, name: &str) -> String;
 }
 
-impl StringParam for getopts::Matches {
+impl MatchHelper for getopts::Matches {
 	fn get_string(&self, name: &str) -> String {
 		if !self.opt_present(name) {
 			return "".to_string();
@@ -148,6 +148,7 @@ impl StringParam for getopts::Matches {
 	}
 }
 
+/// create release to publish.
 fn make_publish() -> Result<(), Box<dyn std::error::Error>> {
 	println!("[INFO] BUILDING...");
 	execute_command(&["cmd.exe", "/C", "cargo.exe", "build", "--quiet", "--release"])?;
@@ -167,7 +168,9 @@ fn make_publish() -> Result<(), Box<dyn std::error::Error>> {
 	return Ok(());
 }
 
+/// utilities for strings.
 trait StringUtility {
+	/// get string at index.
 	fn at(&self, index: usize) -> &str;
 }
 
@@ -213,27 +216,12 @@ fn main() {
 		eprint!("{}", options.usage(""));
 		return;
 	}
-
-	let title = if input.opt_present("title") {
-		input.opt_str("title").unwrap()
-	} else {
-		"".to_string()
-	};
-
-	let branch_name = if input.opt_present("branch") {
-		input.opt_str("branch").unwrap()
-	} else {
-		"".to_string()
-	};
-
-	let notes = if input.opt_present("notes") {
-		input.opt_str("notes").unwrap()
-	} else {
-		"".to_string()
-	};
-
+	let title = input.get_string("title");
+	let branch_name = input.get_string("branch");
+	let notes = input.get_string("notes");
 	let files: Vec<String> = if input.opt_present("file") { input.opt_strs("file") } else { vec![] };
 
+	// CREATE RELEASE
 	let result = gh_release_create(&title, &branch_name, &notes, files);
 	if result.is_err() {
 		println!("[ERROR] {}", result.err().unwrap());
