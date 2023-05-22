@@ -1,19 +1,25 @@
+///
+pub fn magenta<T: std::fmt::Display>(s: T) -> String {
+	return format!("\x1b[32m{}\x1b[0m", s);
+}
+
+/// Get current timestamp as string.
 pub fn get_current_timestamp() -> String {
 	let date = chrono::Local::now();
 	return format!("{}", date.format("%Y-%m-%d %H:%M:%S%.3f"));
 }
 
-/// システムのシェルを利用してコマンドを実行します。
+/// Execute command in shell.
 fn execute_command(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
 	let string = args.join(" ");
-	println!("> {}", string);
+	println!("{}", magenta(format!("> {}", string)));
 
 	let mut command = std::process::Command::new("cmd.exe");
 	let result = command.args(&["/C"]).args(args).spawn()?.wait()?;
 	if !result.success() {
 		let code = result.code().unwrap();
-		println!("[ERROR] process exited with code: {}", code);
-		return Err("コマンドは正常終了しませんでした。".into());
+		println!("[ERROR] process exited with code {}.", code);
+		return Err("Failed to launch command.".into());
 	}
 
 	println!("[DEBUG] process exited with code: {}", result.code().unwrap());
@@ -22,12 +28,14 @@ fn execute_command(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
 
 /// Retrieve latest tag from gh command.
 fn get_gh_current_tag() -> Result<String, Box<dyn std::error::Error>> {
+	println!("{}", magenta("> gh release list"));
+
 	let mut command = std::process::Command::new("cmd.exe");
 	let result = command.args(&["/C"]).args(&["gh", "release", "list"]).output()?;
 	if !result.status.success() {
 		let code = result.status.code().unwrap();
-		println!("[ERROR] process exited with exit code: [{}]", code);
-		return Err("コマンドは正常終了しませんでした。".into());
+		println!("[ERROR] process exited with code {}.", code);
+		return Err("Failed to retrieve the latest tag of the repository in github.com.".into());
 	}
 
 	let stdout = String::from_utf8(result.stdout)?;
@@ -37,7 +45,7 @@ fn get_gh_current_tag() -> Result<String, Box<dyn std::error::Error>> {
 	for line in &lines {
 		let line = line.trim();
 
-		println!("> {}", line);
+		println!("{}", magenta(format!("> {}", line)));
 
 		if !line.contains("Latest") {
 			println!("[DEBUG] ignored. (no latest)");
@@ -52,7 +60,7 @@ fn get_gh_current_tag() -> Result<String, Box<dyn std::error::Error>> {
 
 		// FOUND latest line.
 		let tag = items[2];
-		println!("[DEBUG] Latest release tagged as [{}].", tag);
+		println!("[DEBUG] Found latest release tagged as [{}].", tag);
 		return Ok(tag.to_string());
 	}
 
