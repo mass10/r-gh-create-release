@@ -39,7 +39,8 @@ fn get_gh_current_tag() -> Result<String, Box<dyn std::error::Error>> {
 
 	let line = lines[0];
 	let items: Vec<&str> = line.split("\t").collect();
-	if items.len() < 2 {
+	if items.len() < 3 {
+		println!("[ERROR] invalid line: [{}] (len: {})", line, items.len());
 		return Err("フィールド数がおかしい".into());
 	}
 
