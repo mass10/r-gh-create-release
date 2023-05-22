@@ -31,23 +31,30 @@ fn get_gh_current_tag() -> Result<String, Box<dyn std::error::Error>> {
 	}
 
 	let stdout = String::from_utf8(result.stdout)?;
-	let lines: Vec<&str> = stdout.split("\r\n").collect();
-	if lines.len() < 1 {
-		println!("[DEBUG] no release found.");
-		return Ok("".to_string());
+
+	let lines: Vec<&str> = stdout.split("\n").collect();
+
+	for line in &lines {
+		let line = line.trim();
+		if !line.contains("Latest") {
+			println!("[DEBUG] ignored line: [{}] (no latest)", line);
+			continue;
+		}
+
+		let items: Vec<&str> = line.split("\t").collect();
+		if items.len() < 3 {
+			println!("[DEBUG] ignored line: [{}] (invalid number of fields)", line);
+			continue;
+		}
+
+		// FOUND latest line.
+		let tag = items[2];
+		println!("[DEBUG] Latest release tagged as [{}].", tag);
+		return Ok(tag.to_string());
 	}
 
-	let line = lines[0];
-	let items: Vec<&str> = line.split("\t").collect();
-	if items.len() < 3 {
-		println!("[ERROR] invalid line: [{}] (len: {})", line, items.len());
-		return Err("フィールド数がおかしい".into());
-	}
-
-	let tag = items[2];
-	println!("[DEBUG] Latest release tagged as [{}].", tag);
-
-	return Ok(tag.to_string());
+	// NO valid lines.
+	return Ok("".to_string());
 }
 
 fn parse_uint(text: &str) -> u32 {
