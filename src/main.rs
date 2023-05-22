@@ -12,7 +12,7 @@ fn execute_command(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
 	let result = command.args(&["/C"]).args(args).spawn()?.wait()?;
 	if !result.success() {
 		let code = result.code().unwrap();
-		println!("[error] process exited with code: {}", code);
+		println!("[ERROR] process exited with code: {}", code);
 		return Err("コマンドは正常終了しませんでした。".into());
 	}
 
