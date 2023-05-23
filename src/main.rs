@@ -285,8 +285,9 @@ fn main() {
 		let result = make_publish();
 		if result.is_err() {
 			println!("[ERROR] {}", result.err().unwrap());
+			std::process::exit(1);
 		}
-		std::process::exit(1);
+		return;
 	}
 
 	// Parse arguments.
