@@ -164,9 +164,9 @@ fn gh_release_create(title: &str, target: &str, notes: &str, files: Vec<String>)
 	let latest_tag = get_gh_current_tag()?;
 
 	// increment
-	let next_tag = generate_tag(&latest_tag)?;
+	let mut next_tag = generate_tag(&latest_tag)?;
 	if next_tag == "" {
-		return Err("Failed to generate next tag.".into());
+		next_tag = "1".to_string();
 	}
 	println!("[DEBUG] creating next tag: [{}]", &next_tag);
 
