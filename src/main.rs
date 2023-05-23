@@ -323,3 +323,26 @@ fn main() {
 		std::process::exit(1);
 	}
 }
+
+#[cfg(test)]
+mod tests {
+	use crate::generate_tag;
+
+	#[test]
+	fn test_generating_new_tag() {
+		assert_eq!(generate_tag("").unwrap(), "".to_owned());
+
+		assert_eq!(generate_tag("1").unwrap(), "2".to_owned());
+		assert_eq!(generate_tag("2").unwrap(), "3".to_owned());
+		assert_eq!(generate_tag("10").unwrap(), "11".to_owned());
+		assert_eq!(generate_tag("99").unwrap(), "100".to_owned());
+
+		assert_eq!(generate_tag("v0").unwrap(), "v1".to_owned());
+		assert_eq!(generate_tag("v1002").unwrap(), "v1003".to_owned());
+
+		assert_eq!(generate_tag("0.0.0").unwrap(), "0.0.1".to_owned());
+		assert_eq!(generate_tag("0.0.1").unwrap(), "0.0.2".to_owned());
+
+		assert_eq!(generate_tag("v1.0.567").unwrap(), "v1.0.568".to_owned());
+	}
+}
