@@ -77,27 +77,102 @@ fn parse_uint(text: &str) -> u32 {
 	return number;
 }
 
+fn matches(string_value: &str, expression: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+	let expression = regex::Regex::new(&expression);
+	if expression.is_err() {
+		eprint!("ERROR: regex compile error. {}", expression.err().unwrap());
+		return Err("".into());
+	}
+	let expression = expression.unwrap();
+
+	// try to capture by "(...)".
+	let capture_result = expression.captures(&string_value);
+	if capture_result.is_none() {
+		eprintln!("not match for exprtession [{}].", expression);
+		return Ok(Vec::new());
+	}
+
+	// capture result
+	let capture_result = capture_result.unwrap();
+
+	let mut result: Vec<String> = vec![];
+
+	let mut index = 0;
+
+	for e in capture_result.iter() {
+		if index == 0 {
+			index += 1;
+			continue;
+		}
+		let matched = e.unwrap();
+		let string = matched.as_str().to_string();
+		result.push(string.to_string());
+		index += 1;
+	}
+
+	return Ok(result);
+}
+
+/// Generate a new tag from the current tag.
+fn generate_tag(tag: &str) -> Result<String, Box<dyn std::error::Error>> {
+	// version: v#.#.#
+	let part = matches(&tag, r"^v(\d+)\.(\d+)\.(\d+)$")?;
+	if part.len() == 3 {
+		let major: u32 = parse_uint(&part[0]);
+		let minor: u32 = parse_uint(&part[1]);
+		let patch: u32 = parse_uint(&part[2]);
+		let next_tag = format!("v{}.{}.{}", major, minor, patch + 1);
+		return Ok(next_tag);
+	};
+
+	// version: #.#.#
+	let part = matches(&tag, r"^(\d+)\.(\d+)\.(\d+)$")?;
+	if part.len() == 3 {
+		let major: u32 = parse_uint(&part[0]);
+		let minor: u32 = parse_uint(&part[1]);
+		let patch: u32 = parse_uint(&part[2]);
+		let next_tag = format!("{}.{}.{}", major, minor, patch + 1);
+		return Ok(next_tag);
+	};
+
+	// version: v#
+	let part = matches(&tag, r"^v(\d+)$")?;
+	if part.len() == 1 {
+		let major: u32 = parse_uint(&part[0]);
+		let next_tag = format!("v{}", major + 1);
+		return Ok(next_tag);
+	};
+
+	// version: #
+	let part = matches(&tag, r"^(\d+)$")?;
+	if part.len() == 1 {
+		let major: u32 = parse_uint(&part[0]);
+		let next_tag = format!("{}", major + 1);
+		return Ok(next_tag);
+	};
+
+	return Ok("".to_string());
+}
+
 /// Launch gh command to create release.
 fn gh_release_create(title: &str, target: &str, notes: &str, files: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
 	println!("[DEBUG] files: {:?}", files);
 
 	let mut params: Vec<&str> = vec!["gh", "release", "create"];
 
-	// TAG
-	let mut tag = get_gh_current_tag()?;
-	if tag == "" {
-		tag = "v0".to_string()
-	} else if !tag.starts_with("v") {
-		tag = "v0".to_string()
+	// LATEST TAG
+	let latest_tag = get_gh_current_tag()?;
+
+	// increment
+	let next_tag = generate_tag(&latest_tag)?;
+	if next_tag == "" {
+		return Err("Failed to generate next tag.".into());
 	}
-
-	let current_build_number: u32 = parse_uint(&tag[1..]);
-	let next_tag = format!("v{}", current_build_number + 1);
-	params.push(&next_tag);
-
 	println!("[DEBUG] creating next tag: [{}]", &next_tag);
 
-	// title
+	params.push(&next_tag);
+
+	// TITLE
 	params.push("--title");
 	let release_title = if title == "" {
 		let value = format!("{}, release, {}", &next_tag, get_current_timestamp());
@@ -107,7 +182,7 @@ fn gh_release_create(title: &str, target: &str, notes: &str, files: Vec<String>)
 	};
 	params.push(&release_title);
 
-	// branch (TODO: ※Recognize draft release)
+	// BRANCH (TODO: ※Recognize draft release)
 	if target == "" {
 		params.push("--target");
 		params.push("main");
