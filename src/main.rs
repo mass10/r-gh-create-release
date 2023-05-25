@@ -307,7 +307,7 @@ fn main() {
 
 	if input.opt_present("help") {
 		eprint!("{}", options.usage(""));
-		std::process::exit(1);
+		std::process::exit(0);
 	}
 
 	// Get arguments.
