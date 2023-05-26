@@ -1,9 +1,11 @@
 name: Create release to make .exe published.
 
 on:
+    # main ブランチに変更が push されたときにジョブを実行します。
     push:
         branches: [ "main" ]
 
+    # Web UI から手動でトリガーします。
     workflow_dispatch:
 
 jobs:
