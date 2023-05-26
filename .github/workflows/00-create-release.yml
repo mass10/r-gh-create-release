@@ -24,7 +24,9 @@ jobs:
                 name: my-temporary-artifacts
             # CREATE RELEASE AND UPLOAD EXECUTABLE FILE
           - name: release を作成して実行ファイルを公開
-            run: cargo run -- --publish
+            run: cargo run -- `
+                --file r-gh-create-release.exe
+                --file r-gh-create-release
             env:
                 GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             # DELETE ARTIFACTS
