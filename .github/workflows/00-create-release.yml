@@ -3,19 +3,70 @@ name: Create release to make .exe published.
 on:
     push:
         branches: [ "main" ]
+
     workflow_dispatch:
 
 jobs:
-    build:
+    # CREATE RELEASE AND UPLOAD EXECUTABLE FILE
+    create-releases:
         runs-on: windows-latest
+        needs: [build-on-windows, build-on-linux]
         steps:
-            # Checkout the repo
+            # CHECKOUT REPOSITORY
           - name: Checkout
             uses: actions/checkout@v3
             with:
                 fetch-depth: 1
-            # Publish self
-          - name: Create the app package
+            # DOWNLOAD ARTIFACTS
+          - name: Download artifacts
+            uses: actions/download-artifact@v2
+            with:
+                name: my-temporary-artifacts
+            # CREATE RELEASE AND UPLOAD EXECUTABLE FILE
+          - name: release を作成して実行ファイルを公開
             run: cargo run -- --publish
             env:
                 GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            # DELETE ARTIFACTS
+          - name: Delete artifacts
+            run: |
+                curl -X DELETE -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" `
+                    "https://api.github.com/repos/${{ github.repository }}/actions/artifacts" -d "{""name"":""artifacts""}"
+
+    # FOR WINDOWS
+    build-on-windows:
+        runs-on: windows-latest
+        steps:
+            # CHECKOUT REPOSITORY
+          - name: Checkout
+            uses: actions/checkout@v3
+            with:
+                fetch-depth: 1
+            # BUILD APPLICATION FOR WINDOWS
+          - name: Create the app package
+            run: cargo.exe build --release
+            # CREATE ARTIFACTS
+          - name: Create Release
+            uses: actions/upload-artifact@v3
+            with:
+                name: my-temporary-artifacts
+                path: target\release\r-gh-create-release.exe
+
+    # FOR LINUX
+    build-on-linux:
+        runs-on: ubuntu-20.04 # ubuntu-latest
+        steps:
+            # CHECKOUT REPOSITORY
+          - name: Checkout
+            uses: actions/checkout@v3
+            with:
+                fetch-depth: 1
+            # BUILD APPLICATION FOR WINDOWS
+          - name: Create the app package
+            run: cargo build --release
+            # CREATE ARTIFACTS
+          - name: Create Release
+            uses: actions/upload-artifact@v3
+            with:
+                name: my-temporary-artifacts
+                path: target/release/r-gh-create-release
