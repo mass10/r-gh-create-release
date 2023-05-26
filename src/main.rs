@@ -277,22 +277,10 @@ impl StringUtility for Vec<String> {
 fn main() {
 	let args: Vec<String> = std::env::args().skip(1).collect();
 
-	// Retrieve the first argument.
-	let first_request = args.at(0);
-
-	if first_request == "--publish" {
-		// Build self, and make publish.
-		let result = make_publish();
-		if result.is_err() {
-			println!("[ERROR] {}", result.err().unwrap());
-			std::process::exit(1);
-		}
-		return;
-	}
-
 	// Parse arguments.
 	let mut options = getopts::Options::new();
 	options.optflag("h", "help", "usage");
+	options.optflag("", "publish", "go publish");
 	options.opt("", "notes", "string", "STRING", getopts::HasArg::Yes, getopts::Occur::Optional);
 	options.opt("", "title", "string", "STRING", getopts::HasArg::Yes, getopts::Occur::Optional);
 	options.opt("", "target", "string", "STRING", getopts::HasArg::Yes, getopts::Occur::Optional);
@@ -307,7 +295,17 @@ fn main() {
 
 	if input.opt_present("help") {
 		eprint!("{}", options.usage(""));
-		std::process::exit(0);
+		return;
+	}
+
+	if input.opt_present("publish") {
+		// Build self, and make publish.
+		let result = make_publish();
+		if result.is_err() {
+			println!("[ERROR] {}", result.err().unwrap());
+			std::process::exit(1);
+		}
+		return;
 	}
 
 	// Get arguments.
