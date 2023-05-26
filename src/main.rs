@@ -9,6 +9,12 @@ pub fn get_current_timestamp() -> String {
 	return format!("{}", date.format("%Y-%m-%d %H:%M:%S%.3f"));
 }
 
+/// Whether if file exists.
+fn is_file(path: &str) -> bool {
+	let path = std::path::Path::new(path);
+	return path.exists();
+}
+
 /// Execute command in shell.
 fn execute_command(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
 	let string = args.join(" ");
@@ -196,8 +202,14 @@ fn gh_release_create(title: &str, target: &str, notes: &str, files: Vec<String>)
 
 	// RELEASE NOTES
 	if notes == "" {
+		// Generate release notes automatically.
 		params.push("--generate-notes");
+	} else if is_file(notes) {
+		// Argument is file path.
+		params.push("--notes-file");
+		params.push(notes);
 	} else {
+		// Argument is string.
 		params.push("--notes");
 		params.push(notes);
 	}
@@ -216,6 +228,8 @@ fn gh_release_create(title: &str, target: &str, notes: &str, files: Vec<String>)
 
 trait MatchHelper {
 	fn get_string(&self, name: &str) -> String;
+
+	fn get_strings(&self, name: &str) -> Vec<String>;
 }
 
 impl MatchHelper for getopts::Matches {
@@ -228,6 +242,13 @@ impl MatchHelper for getopts::Matches {
 			return "".to_string();
 		}
 		return status.unwrap();
+	}
+
+	fn get_strings(&self, name: &str) -> Vec<String> {
+		if !self.opt_present(name) {
+			return Vec::new();
+		}
+		return self.opt_strs(name);
 	}
 }
 
@@ -308,11 +329,18 @@ fn main() {
 		return;
 	}
 
-	// Get arguments.
+	// Release title.
 	let title = input.get_string("title");
+
+	// Branch name.
 	let target = input.get_string("target");
+
+	// Release notes.
+	// --generate-notes will be used if this is empty.
 	let notes = input.get_string("notes");
-	let files: Vec<String> = if input.opt_present("file") { input.opt_strs("file") } else { vec![] };
+
+	// Attachments.
+	let files: Vec<String> = input.get_strings("file");
 
 	// Create release.
 	let result = gh_release_create(&title, &target, &notes, files);
