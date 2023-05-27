@@ -37,38 +37,89 @@ fn is_file(path: &str) -> bool {
 	return path.exists();
 }
 
+/// Whether if the current OS is Windows.
+fn is_windows() -> bool {
+	return cfg!(target_os = "windows");
+}
+
+/// Whether if the current OS is Linux.
+fn is_linux() -> bool {
+	return cfg!(target_os = "linux");
+}
+
 /// Execute command in shell.
 fn execute_command(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
-	let string = args.join(" ");
-	green!("> {}", string);
-
-	let mut command = std::process::Command::new("cmd.exe");
-	let result = command.args(&["/C"]).args(args).spawn()?.wait()?;
-	if !result.success() {
-		let code = result.code().unwrap();
-		error!("process exited with code {}.", code);
-		error!("Failed to execute command.");
-		return Err("Command exited with error.".into());
+	{
+		let string = args.join(" ");
+		green!("> {}", string);
 	}
 
-	info!("process exited with code: {}", result.code().unwrap());
+	if is_windows() {
+		let (cmd_name, args) = args.split_first().unwrap();
+		let mut command = std::process::Command::new(cmd_name);
+		let result = command.args(args).spawn()?.wait()?;
+		if !result.success() {
+			let code = result.code().unwrap();
+			error!("process exited with code {}.", code);
+			error!("Failed to execute command.");
+			return Err("Command exited with error.".into());
+		}
+
+		info!("process exited with code: {}", result.code().unwrap());
+	} else if is_linux() {
+		let (cmd_name, args) = args.split_first().unwrap();
+		let mut command = std::process::Command::new(cmd_name);
+		let result = command.args(args).spawn()?.wait()?;
+		if !result.success() {
+			let code = result.code().unwrap();
+			error!("process exited with code {}.", code);
+			error!("Failed to execute command.");
+			return Err("Command exited with error.".into());
+		}
+
+		info!("process exited with code: {}", result.code().unwrap());
+	} else {
+		return Err("Unsupported OS.".into());
+	}
+
 	return Ok(());
+}
+
+/// Query the latest tag of this repository.
+fn execute_gh_release_list() -> Result<String, Box<dyn std::error::Error>> {
+	green!("> gh release list");
+
+	if is_windows() {
+		let mut command = std::process::Command::new("gh.exe");
+		let result = command.args(&["release", "list"]).stderr(std::process::Stdio::inherit()).output()?;
+		if !result.status.success() {
+			let code = result.status.code().unwrap();
+			error!("process exited with code {}.", code);
+			error!("Failed to retrieve the latest tag of the repository in github.com.");
+			return Err("Command exited with error.".into());
+		}
+		let stdout = String::from_utf8(result.stdout)?;
+		return Ok(stdout);
+	} else if is_linux() {
+		let mut command = std::process::Command::new("gh");
+		let result = command.args(&["release", "list"]).stderr(std::process::Stdio::inherit()).
+			output()?;
+		if !result.status.success() {
+			let code = result.status.code().unwrap();
+			error!("process exited with code {}.", code);
+			error!("Failed to retrieve the latest tag of the repository in github.com.");
+			return Err("Command exited with error.".into());
+		}
+		let stdout = String::from_utf8(result.stdout)?;
+		return Ok(stdout);
+	} else {
+		return Err("Unsupported OS.".into());
+	}
 }
 
 /// Retrieve latest tag from gh command.
 fn get_gh_current_tag() -> Result<String, Box<dyn std::error::Error>> {
-	green!("> gh release list");
-
-	let mut command = std::process::Command::new("cmd.exe");
-	let result = command.args(&["/C"]).args(&["gh", "release", "list"]).output()?;
-	if !result.status.success() {
-		let code = result.status.code().unwrap();
-		error!("process exited with code {}.", code);
-		error!("Failed to retrieve the latest tag of the repository in github.com.");
-		return Err("Command exited with error.".into());
-	}
-
-	let stdout = String::from_utf8(result.stdout)?;
+	let stdout = execute_gh_release_list()?;
 
 	let lines: Vec<&str> = stdout.split("\n").collect();
 
@@ -88,9 +139,9 @@ fn get_gh_current_tag() -> Result<String, Box<dyn std::error::Error>> {
 			continue;
 		}
 
-		// FOUND latest line.
+		// It is the "Latest" line.
 		let tag = items[2];
-		info!("Found latest release tagged as [{}].", tag);
+		info!("FOUND latest release tagged as [{}].", tag);
 		return Ok(tag.to_string());
 	}
 
@@ -218,7 +269,7 @@ fn gh_release_create(dry_run: bool, title: &str, target: &str, notes: &str, file
 	if next_tag == "" {
 		next_tag = "1".to_string();
 	}
-	info!("next tag: [{}]", &next_tag);
+	info!("NEXT TAG: [{}]", &next_tag);
 
 	params.push(&next_tag);
 
@@ -304,37 +355,60 @@ impl MatchHelper for getopts::Matches {
 	}
 }
 
-/// create release to publish.
-fn make_publish(dry_run: bool) -> Result<(), Box<dyn std::error::Error>> {
+fn build_myself() -> Result<(), Box<dyn std::error::Error>> {
 	info!("BUILDING...");
 
-	execute_command(&["cmd.exe", "/C", "cargo.exe", "build", "--quiet", "--release"])?;
+	// win/linux
+	execute_command(&["cargo", "build", "--quiet", "--release"])?;
+
+	return Ok(());
+}
+
+/// create release to publish.
+fn make_publish(dry_run: bool) -> Result<(), Box<dyn std::error::Error>> {
+	build_myself()?;
 
 	let crate_version = env!("CARGO_PKG_VERSION");
 
 	if dry_run {
 		info!("PUBLISHING... (DRY-RUN)");
 
-		println!(
-			"cmd.exe /C cargo.exe run --quiet --release -- --title {} --file target\\release\\r-gh-create-release.exe",
-			&crate_version
-		);
+		if is_windows() {
+			println!("cargo.exe run --quiet --release -- --title {} --file target\\release\\r-gh-create-release.exe", &crate_version);
+		} else {
+			println!(
+				"cargo run --quiet --release -- --title {} --file target/release/r-gh-create-release",
+				&crate_version
+			);
+		}
 	} else {
 		info!("PUBLISHING...");
 
-		execute_command(&[
-			"cmd.exe",
-			"/C",
-			"cargo.exe",
-			"run",
-			"--quiet",
-			"--release",
-			"--",
-			"--title",
-			&crate_version,
-			"--file",
-			"target\\release\\r-gh-create-release.exe",
-		])?;
+		if is_windows() {
+			execute_command(&[
+				"cargo.exe",
+				"run",
+				"--quiet",
+				"--release",
+				"--",
+				"--title",
+				&crate_version,
+				"--file",
+				"target\\release\\r-gh-create-release.exe",
+			])?;
+		} else {
+			execute_command(&[
+				"cargo",
+				"run",
+				"--quiet",
+				"--release",
+				"--",
+				"--title",
+				&crate_version,
+				"--file",
+				"target/release/r-gh-create-release",
+			])?;
+		}
 	}
 
 	return Ok(());
@@ -381,7 +455,8 @@ fn main() {
 
 	if input.opt_present("help") {
 		// ========== OPTIONAL: SHOW HELP ==========
-		eprint!("{}", options.usage(""));
+		// eprint!("{}", options.usage(""));
+		execute_command(&["cargo", "version"]).unwrap();
 	} else if input.opt_present("publish") {
 		// ========== OPTIONAL: MAKE PUBLISH SELF ==========
 		// Build once in release, and make self publish.
