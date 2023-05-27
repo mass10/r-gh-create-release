@@ -1,13 +1,14 @@
-/// println! macro
-macro_rules! debug {
+/// macro: print info text.
+macro_rules! info {
 	() => {
 		println!("");
 	};
 	($($arg:tt)*) => {
-		println!("[DEBUG] {}", format!($($arg)*));
+		println!("[INFO] {}", format!($($arg)*));
 	};
 }
 
+/// macro: print error text.
 macro_rules! error {
 	() => {
 		println!("");
@@ -50,7 +51,7 @@ fn execute_command(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
 		return Err("Command exited with error.".into());
 	}
 
-	debug!("process exited with code: {}", result.code().unwrap());
+	info!("process exited with code: {}", result.code().unwrap());
 	return Ok(());
 }
 
@@ -77,19 +78,19 @@ fn get_gh_current_tag() -> Result<String, Box<dyn std::error::Error>> {
 		green!("> {}", line);
 
 		if !line.contains("Latest") {
-			debug!("ignored. (no latest)");
+			info!("ignored. (no latest)");
 			continue;
 		}
 
 		let items: Vec<&str> = line.split("\t").collect();
 		if items.len() < 3 {
-			debug!("ignored. (invalid number of fields {})", items.len());
+			info!("ignored. (invalid number of fields {})", items.len());
 			continue;
 		}
 
 		// FOUND latest line.
 		let tag = items[2];
-		debug!("Found latest release tagged as [{}].", tag);
+		info!("Found latest release tagged as [{}].", tag);
 		return Ok(tag.to_string());
 	}
 
@@ -117,11 +118,11 @@ fn matches(string_value: &str, expression: &str) -> Result<Vec<String>, Box<dyn 
 	// try to capture by "(...)".
 	let capture_result = expression.captures(&string_value);
 	if capture_result.is_none() {
-		debug!("NOT MATCHED for expression [{}].", expression);
+		info!("NOT MATCHED for expression [{}].", expression);
 		return Ok(Vec::new());
 	}
 
-	debug!("MATCHED for expression [{}].", expression);
+	info!("MATCHED for expression [{}].", expression);
 
 	// capture result
 	let capture_result = capture_result.unwrap();
@@ -205,7 +206,7 @@ fn straighten_command_string(params: &[&str]) -> String {
 
 /// Launch gh command to create release.
 fn gh_release_create(dry_run: bool, title: &str, target: &str, notes: &str, files: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
-	debug!("files: {:?}", files);
+	info!("files: {:?}", files);
 
 	let mut params: Vec<&str> = vec!["gh", "release", "create"];
 
@@ -217,7 +218,7 @@ fn gh_release_create(dry_run: bool, title: &str, target: &str, notes: &str, file
 	if next_tag == "" {
 		next_tag = "1".to_string();
 	}
-	debug!("next tag: [{}]", &next_tag);
+	info!("next tag: [{}]", &next_tag);
 
 	params.push(&next_tag);
 
@@ -264,12 +265,12 @@ fn gh_release_create(dry_run: bool, title: &str, target: &str, notes: &str, file
 
 	if dry_run {
 		// Dry run.
-		debug!("CREATING RELEASE... (DRY-RUN)");
+		info!("CREATING RELEASE... (DRY-RUN)");
 
 		let command_string = straighten_command_string(&params);
 		green!("> {}", &command_string);
 	} else {
-		debug!("CREATING RELEASE...");
+		info!("CREATING RELEASE...");
 
 		execute_command(&params)?;
 	}
@@ -305,21 +306,21 @@ impl MatchHelper for getopts::Matches {
 
 /// create release to publish.
 fn make_publish(dry_run: bool) -> Result<(), Box<dyn std::error::Error>> {
-	debug!("BUILDING...");
+	info!("BUILDING...");
 
 	execute_command(&["cmd.exe", "/C", "cargo.exe", "build", "--quiet", "--release"])?;
 
 	let crate_version = env!("CARGO_PKG_VERSION");
 
 	if dry_run {
-		debug!("PUBLISHING... (DRY-RUN)");
+		info!("PUBLISHING... (DRY-RUN)");
 
 		println!(
 			"cmd.exe /C cargo.exe run --quiet --release -- --title {} --file target\\release\\r-gh-create-release.exe",
 			&crate_version
 		);
 	} else {
-		debug!("PUBLISHING...");
+		info!("PUBLISHING...");
 
 		execute_command(&[
 			"cmd.exe",
@@ -379,40 +380,39 @@ fn main() {
 	let dry_run = input.opt_present("dry-run");
 
 	if input.opt_present("help") {
+		// ========== OPTIONAL: SHOW HELP ==========
 		eprint!("{}", options.usage(""));
-		return;
-	}
-
-	if input.opt_present("publish") {
-		// Build self, and make publish.
+	} else if input.opt_present("publish") {
+		// ========== OPTIONAL: MAKE PUBLISH SELF ==========
+		// Build once in release, and make self publish.
 		let result = make_publish(dry_run);
 		if result.is_err() {
 			let reason = result.err().unwrap();
 			error!("{}", reason);
 			std::process::exit(1);
 		}
-		return;
-	}
+	} else {
+		// ========== DEFAULT: CREATE RELEASE ==========
+		// option: Release title.
+		let title = input.get_string("title");
 
-	// option: Release title.
-	let title = input.get_string("title");
+		// option: Branch name.
+		let target = input.get_string("target");
 
-	// option: Branch name.
-	let target = input.get_string("target");
+		// option: Release notes.
+		//   --generate-notes will be used if this is empty.
+		let notes = input.get_string("notes");
 
-	// option: Release notes.
-	//   --generate-notes will be used if this is empty.
-	let notes = input.get_string("notes");
+		// option: Attachments.
+		let files: Vec<String> = input.get_strings("file");
 
-	// option: Attachments.
-	let files: Vec<String> = input.get_strings("file");
-
-	// Create release.
-	let result = gh_release_create(dry_run, &title, &target, &notes, files);
-	if result.is_err() {
-		let reason = result.err().unwrap();
-		error!("{}", reason);
-		std::process::exit(1);
+		// Create release.
+		let result = gh_release_create(dry_run, &title, &target, &notes, files);
+		if result.is_err() {
+			let reason = result.err().unwrap();
+			error!("{}", reason);
+			std::process::exit(1);
+		}
 	}
 }
 
