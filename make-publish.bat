@@ -1,1 +1,1 @@
-@cargo run -- --publish
+@cargo run -- --publish %*
