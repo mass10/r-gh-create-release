@@ -4,7 +4,7 @@ A wrapper utility of `gh release`.
 
 # Examples
 
-### Create release with 1 attachment.
+### Create release with 1 attachment from your main branch.
 * Release notes will be created automatically.
 
 ```sh
