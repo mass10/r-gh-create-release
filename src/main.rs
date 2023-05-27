@@ -1,6 +1,27 @@
+/// println! macro
+macro_rules! debug {
+	() => {
+		println!("");
+	};
+	($($arg:tt)*) => {
+		println!("[DEBUG] {}", format!($($arg)*));
+	};
+}
+
+macro_rules! error {
+	() => {
+		println!("");
+	};
+	($($arg:tt)*) => {
+		println!("[ERROR] {}", format!($($arg)*));
+	};
+}
+
 /// Print text in green.
-pub fn green<T: std::fmt::Display>(s: T) -> String {
-	return format!("\x1b[32m{}\x1b[0m", s);
+macro_rules! green {
+	($($arg:tt)*) => {
+		println!("{}", format!("\x1b[32m{}\x1b[0m", format!($($arg)*)));
+	};
 }
 
 /// Get current timestamp as string.
@@ -18,30 +39,32 @@ fn is_file(path: &str) -> bool {
 /// Execute command in shell.
 fn execute_command(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
 	let string = args.join(" ");
-	println!("{}", green(format!("> {}", string)));
+	green!("> {}", string);
 
 	let mut command = std::process::Command::new("cmd.exe");
 	let result = command.args(&["/C"]).args(args).spawn()?.wait()?;
 	if !result.success() {
 		let code = result.code().unwrap();
-		println!("[ERROR] process exited with code {}.", code);
-		return Err("Failed to launch command.".into());
+		error!("process exited with code {}.", code);
+		error!("Failed to execute command.");
+		return Err("Command exited with error.".into());
 	}
 
-	println!("[DEBUG] process exited with code: {}", result.code().unwrap());
+	debug!("process exited with code: {}", result.code().unwrap());
 	return Ok(());
 }
 
 /// Retrieve latest tag from gh command.
 fn get_gh_current_tag() -> Result<String, Box<dyn std::error::Error>> {
-	println!("{}", green("> gh release list"));
+	green!("> gh release list");
 
 	let mut command = std::process::Command::new("cmd.exe");
 	let result = command.args(&["/C"]).args(&["gh", "release", "list"]).output()?;
 	if !result.status.success() {
 		let code = result.status.code().unwrap();
-		println!("[ERROR] process exited with code {}.", code);
-		return Err("Failed to retrieve the latest tag of the repository in github.com.".into());
+		error!("process exited with code {}.", code);
+		error!("Failed to retrieve the latest tag of the repository in github.com.");
+		return Err("Command exited with error.".into());
 	}
 
 	let stdout = String::from_utf8(result.stdout)?;
@@ -51,22 +74,22 @@ fn get_gh_current_tag() -> Result<String, Box<dyn std::error::Error>> {
 	for line in &lines {
 		let line = line.trim();
 
-		println!("{}", green(format!("> {}", line)));
+		green!("> {}", line);
 
 		if !line.contains("Latest") {
-			println!("[DEBUG] ignored. (no latest)");
+			debug!("ignored. (no latest)");
 			continue;
 		}
 
 		let items: Vec<&str> = line.split("\t").collect();
 		if items.len() < 3 {
-			println!("[DEBUG] ignored. (invalid number of fields {})", items.len());
+			debug!("ignored. (invalid number of fields {})", items.len());
 			continue;
 		}
 
 		// FOUND latest line.
 		let tag = items[2];
-		println!("[DEBUG] Found latest release tagged as [{}].", tag);
+		debug!("Found latest release tagged as [{}].", tag);
 		return Ok(tag.to_string());
 	}
 
@@ -86,17 +109,19 @@ fn parse_uint(text: &str) -> u32 {
 fn matches(string_value: &str, expression: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
 	let expression = regex::Regex::new(&expression);
 	if expression.is_err() {
-		eprint!("ERROR: regex compile error. {}", expression.err().unwrap());
-		return Err("".into());
+		error!("regex compilation error. {}", expression.err().unwrap());
+		return Err("Command exited with error.".into());
 	}
 	let expression = expression.unwrap();
 
 	// try to capture by "(...)".
 	let capture_result = expression.captures(&string_value);
 	if capture_result.is_none() {
-		eprintln!("not match for exprtession [{}].", expression);
+		debug!("NOT MATCHED for expression [{}].", expression);
 		return Ok(Vec::new());
 	}
+
+	debug!("MATCHED for expression [{}].", expression);
 
 	// capture result
 	let capture_result = capture_result.unwrap();
@@ -107,6 +132,7 @@ fn matches(string_value: &str, expression: &str) -> Result<Vec<String>, Box<dyn 
 
 	for e in capture_result.iter() {
 		if index == 0 {
+			// Skip the first element that is not a capture.
 			index += 1;
 			continue;
 		}
@@ -160,9 +186,26 @@ fn generate_tag(tag: &str) -> Result<String, Box<dyn std::error::Error>> {
 	return Ok("".to_string());
 }
 
+fn straighten_command_string(params: &[&str]) -> String {
+	let mut result = String::new();
+	for param in params {
+		if result.len() > 0 {
+			result.push(' ');
+		}
+		if param.contains(" ") {
+			result.push('"');
+			result.push_str(param);
+			result.push('"');
+			continue;
+		}
+		result.push_str(param);
+	}
+	return result;
+}
+
 /// Launch gh command to create release.
-fn gh_release_create(title: &str, target: &str, notes: &str, files: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
-	println!("[DEBUG] files: {:?}", files);
+fn gh_release_create(dry_run: bool, title: &str, target: &str, notes: &str, files: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
+	debug!("files: {:?}", files);
 
 	let mut params: Vec<&str> = vec!["gh", "release", "create"];
 
@@ -174,7 +217,7 @@ fn gh_release_create(title: &str, target: &str, notes: &str, files: Vec<String>)
 	if next_tag == "" {
 		next_tag = "1".to_string();
 	}
-	println!("[DEBUG] creating next tag: [{}]", &next_tag);
+	debug!("next tag: [{}]", &next_tag);
 
 	params.push(&next_tag);
 
@@ -219,9 +262,17 @@ fn gh_release_create(title: &str, target: &str, notes: &str, files: Vec<String>)
 		params.push(&file);
 	}
 
-	println!("[DEBUG] calling gh command.");
+	if dry_run {
+		// Dry run.
+		debug!("CREATING RELEASE... (DRY-RUN)");
 
-	execute_command(&params)?;
+		let command_string = straighten_command_string(&params);
+		green!("> {}", &command_string);
+	} else {
+		debug!("CREATING RELEASE...");
+
+		execute_command(&params)?;
+	}
 
 	return Ok(());
 }
@@ -253,28 +304,37 @@ impl MatchHelper for getopts::Matches {
 }
 
 /// create release to publish.
-fn make_publish() -> Result<(), Box<dyn std::error::Error>> {
-	println!("[INFO] BUILDING...");
+fn make_publish(dry_run: bool) -> Result<(), Box<dyn std::error::Error>> {
+	debug!("BUILDING...");
 
 	execute_command(&["cmd.exe", "/C", "cargo.exe", "build", "--quiet", "--release"])?;
 
-	println!("[INFO] PUBLISHING...");
-
 	let crate_version = env!("CARGO_PKG_VERSION");
 
-	execute_command(&[
-		"cmd.exe",
-		"/C",
-		"cargo.exe",
-		"run",
-		"--quiet",
-		"--release",
-		"--",
-		"--title",
-		&crate_version,
-		"--file",
-		"target\\release\\r-gh-create-release.exe",
-	])?;
+	if dry_run {
+		debug!("PUBLISHING... (DRY-RUN)");
+
+		println!(
+			"cmd.exe /C cargo.exe run --quiet --release -- --title {} --file target\\release\\r-gh-create-release.exe",
+			&crate_version
+		);
+	} else {
+		debug!("PUBLISHING...");
+
+		execute_command(&[
+			"cmd.exe",
+			"/C",
+			"cargo.exe",
+			"run",
+			"--quiet",
+			"--release",
+			"--",
+			"--title",
+			&crate_version,
+			"--file",
+			"target\\release\\r-gh-create-release.exe",
+		])?;
+	}
 
 	return Ok(());
 }
@@ -302,6 +362,7 @@ fn main() {
 	let mut options = getopts::Options::new();
 	options.optflag("h", "help", "usage");
 	options.optflag("", "publish", "go publish");
+	options.optflag("", "dry-run", "dry run");
 	options.opt("", "notes", "string", "STRING", getopts::HasArg::Yes, getopts::Occur::Optional);
 	options.opt("", "title", "string", "STRING", getopts::HasArg::Yes, getopts::Occur::Optional);
 	options.opt("", "target", "string", "STRING", getopts::HasArg::Yes, getopts::Occur::Optional);
@@ -314,6 +375,9 @@ fn main() {
 	}
 	let input = result.unwrap();
 
+	// Option: Dry run.
+	let dry_run = input.opt_present("dry-run");
+
 	if input.opt_present("help") {
 		eprint!("{}", options.usage(""));
 		return;
@@ -321,31 +385,33 @@ fn main() {
 
 	if input.opt_present("publish") {
 		// Build self, and make publish.
-		let result = make_publish();
+		let result = make_publish(dry_run);
 		if result.is_err() {
-			println!("[ERROR] {}", result.err().unwrap());
+			let reason = result.err().unwrap();
+			error!("{}", reason);
 			std::process::exit(1);
 		}
 		return;
 	}
 
-	// Release title.
+	// option: Release title.
 	let title = input.get_string("title");
 
-	// Branch name.
+	// option: Branch name.
 	let target = input.get_string("target");
 
-	// Release notes.
-	// --generate-notes will be used if this is empty.
+	// option: Release notes.
+	//   --generate-notes will be used if this is empty.
 	let notes = input.get_string("notes");
 
-	// Attachments.
+	// option: Attachments.
 	let files: Vec<String> = input.get_strings("file");
 
 	// Create release.
-	let result = gh_release_create(&title, &target, &notes, files);
+	let result = gh_release_create(dry_run, &title, &target, &notes, files);
 	if result.is_err() {
-		println!("[ERROR] {}", result.err().unwrap());
+		let reason = result.err().unwrap();
+		error!("{}", reason);
 		std::process::exit(1);
 	}
 }
