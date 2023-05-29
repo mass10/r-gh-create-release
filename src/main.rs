@@ -102,8 +102,7 @@ fn execute_gh_release_list() -> Result<String, Box<dyn std::error::Error>> {
 		return Ok(stdout);
 	} else if is_linux() {
 		let mut command = std::process::Command::new("gh");
-		let result = command.args(&["release", "list"]).stderr(std::process::Stdio::inherit()).
-			output()?;
+		let result = command.args(&["release", "list"]).stderr(std::process::Stdio::inherit()).output()?;
 		if !result.status.success() {
 			let code = result.status.code().unwrap();
 			error!("process exited with code {}.", code);
@@ -255,22 +254,62 @@ fn straighten_command_string(params: &[&str]) -> String {
 	return result;
 }
 
+fn getenv(name: &str) -> String {
+	let result = std::env::var(name);
+	return result.unwrap_or_default();
+}
+
+/// Try to get the tag name from the environment variable GITHUB_REF.
+fn try_get_tag_name() -> Result<Option<String>, Box<dyn std::error::Error>> {
+	// May be Branch description or tag description.
+	let tag = getenv("GITHUB_REF");
+
+	let result = matches(&tag, r"^refs/tags/(.+)$")?;
+	if result.len() != 1 {
+		return Ok(None);
+	}
+
+	return Ok(Some(result[0].clone()));
+}
+
+fn generate_new_tag(new_tag: &str) -> Result<String, Box<dyn std::error::Error>> {
+	if new_tag != "" {
+		info!("NEXT TAG: [{}]", new_tag);
+
+		return Ok(new_tag.to_string());
+	} else if let Some(tag_name) = try_get_tag_name()? {
+		// GITHUB_REF_NAME exists. Triggered by tagging on GitHub Actions.
+		if tag_name == "" {
+			error!("GITHUB_REF_NAME is empty.");
+			return Err("Command exited with error.".into());
+		}
+
+		info!("NEXT TAG: [{}]", &tag_name);
+
+		return Ok(tag_name);
+	} else {
+		// latest tag in releases.
+		let latest_tag = get_gh_current_tag()?;
+
+		// increment
+		let mut next_tag = generate_tag(&latest_tag)?;
+		if next_tag == "" {
+			next_tag = "1".to_string();
+		}
+
+		info!("NEXT TAG: [{}]", &next_tag);
+
+		return Ok(next_tag);
+	}
+}
+
 /// Launch gh command to create release.
-fn gh_release_create(dry_run: bool, title: &str, target: &str, notes: &str, files: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
+fn gh_release_create(dry_run: bool, new_tag: &str, title: &str, target: &str, notes: &str, files: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
 	info!("files: {:?}", files);
 
 	let mut params: Vec<&str> = vec!["gh", "release", "create"];
 
-	// LATEST TAG
-	let latest_tag = get_gh_current_tag()?;
-
-	// increment
-	let mut next_tag = generate_tag(&latest_tag)?;
-	if next_tag == "" {
-		next_tag = "1".to_string();
-	}
-	info!("NEXT TAG: [{}]", &next_tag);
-
+	let next_tag = generate_new_tag(new_tag)?;
 	params.push(&next_tag);
 
 	// TITLE
@@ -374,7 +413,10 @@ fn make_publish(dry_run: bool) -> Result<(), Box<dyn std::error::Error>> {
 		info!("PUBLISHING... (DRY-RUN)");
 
 		if is_windows() {
-			println!("cargo.exe run --quiet --release -- --title {} --file target\\release\\r-gh-create-release.exe", &crate_version);
+			println!(
+				"cargo.exe run --quiet --release -- --title {} --file target\\release\\r-gh-create-release.exe",
+				&crate_version
+			);
 		} else {
 			println!(
 				"cargo run --quiet --release -- --title {} --file target/release/r-gh-create-release",
@@ -439,6 +481,7 @@ fn main() {
 	options.optflag("", "publish", "go publish");
 	options.optflag("", "dry-run", "dry run");
 	options.opt("", "notes", "string", "STRING", getopts::HasArg::Yes, getopts::Occur::Optional);
+	options.opt("", "tag", "create release using tag.", "STRING", getopts::HasArg::Yes, getopts::Occur::Optional);
 	options.opt("", "title", "string", "STRING", getopts::HasArg::Yes, getopts::Occur::Optional);
 	options.opt("", "target", "string", "STRING", getopts::HasArg::Yes, getopts::Occur::Optional);
 	options.opt("", "file", "string", "ARRAY", getopts::HasArg::Yes, getopts::Occur::Multi);
@@ -455,8 +498,7 @@ fn main() {
 
 	if input.opt_present("help") {
 		// ========== OPTIONAL: SHOW HELP ==========
-		// eprint!("{}", options.usage(""));
-		execute_command(&["cargo", "version"]).unwrap();
+		eprintln!("{}", options.usage(""));
 	} else if input.opt_present("publish") {
 		// ========== OPTIONAL: MAKE PUBLISH SELF ==========
 		// Build once in release, and make self publish.
@@ -468,6 +510,9 @@ fn main() {
 		}
 	} else {
 		// ========== DEFAULT: CREATE RELEASE ==========
+		// Option: Use tag.
+		let tag_name = input.get_string("tag");
+
 		// option: Release title.
 		let title = input.get_string("title");
 
@@ -482,7 +527,7 @@ fn main() {
 		let files: Vec<String> = input.get_strings("file");
 
 		// Create release.
-		let result = gh_release_create(dry_run, &title, &target, &notes, files);
+		let result = gh_release_create(dry_run, &tag_name, &title, &target, &notes, files);
 		if result.is_err() {
 			let reason = result.err().unwrap();
 			error!("{}", reason);
