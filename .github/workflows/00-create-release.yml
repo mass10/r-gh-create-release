@@ -13,6 +13,9 @@ jobs:
     create-releases:
         runs-on: windows-latest
         needs: [build-on-windows, build-on-linux]
+        permissions:
+            # "write" permission is required to create a release. (NO NEED to grant at repository settings.)
+            contents: write
         steps:
             # CHECKOUT REPOSITORY
           - name: Checkout
