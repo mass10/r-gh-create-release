@@ -92,15 +92,16 @@ pub fn execute_command(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> 
 	return Ok(());
 }
 
+/// strtoul.
 pub fn parse_uint(text: &str) -> u32 {
 	let number: Result<u32, _> = text.parse();
 	if number.is_err() {
 		return 0;
 	}
-	let number = number.unwrap();
-	return number;
+	return number.unwrap();
 }
 
+/// For trace.
 pub fn straighten_command_string(params: &[&str]) -> String {
 	let mut result = String::new();
 	for param in params {
@@ -121,4 +122,31 @@ pub fn straighten_command_string(params: &[&str]) -> String {
 pub fn getenv(name: &str) -> String {
 	let result = std::env::var(name);
 	return result.unwrap_or_default();
+}
+
+/// Helpers for getopts::Matches.
+pub trait MatchHelper {
+	fn get_string(&self, name: &str) -> String;
+
+	fn get_strings(&self, name: &str) -> Vec<String>;
+}
+
+impl MatchHelper for getopts::Matches {
+	fn get_string(&self, name: &str) -> String {
+		if !self.opt_present(name) {
+			return "".to_string();
+		}
+		let status = self.opt_str(name);
+		if status.is_none() {
+			return "".to_string();
+		}
+		return status.unwrap();
+	}
+
+	fn get_strings(&self, name: &str) -> Vec<String> {
+		if !self.opt_present(name) {
+			return Vec::new();
+		}
+		return self.opt_strs(name);
+	}
 }

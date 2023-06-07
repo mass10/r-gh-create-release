@@ -256,32 +256,6 @@ fn gh_release_create(dry_run: bool, new_tag: &str, title: &str, target: &str, no
 	return Ok(());
 }
 
-trait MatchHelper {
-	fn get_string(&self, name: &str) -> String;
-
-	fn get_strings(&self, name: &str) -> Vec<String>;
-}
-
-impl MatchHelper for getopts::Matches {
-	fn get_string(&self, name: &str) -> String {
-		if !self.opt_present(name) {
-			return "".to_string();
-		}
-		let status = self.opt_str(name);
-		if status.is_none() {
-			return "".to_string();
-		}
-		return status.unwrap();
-	}
-
-	fn get_strings(&self, name: &str) -> Vec<String> {
-		if !self.opt_present(name) {
-			return Vec::new();
-		}
-		return self.opt_strs(name);
-	}
-}
-
 fn build_myself() -> Result<(), Box<dyn std::error::Error>> {
 	info!("BUILDING...");
 
@@ -361,6 +335,8 @@ impl StringUtility for Vec<String> {
 
 /// Entrypoint of Rust application.
 fn main() {
+	use util::MatchHelper;
+
 	let args: Vec<String> = std::env::args().skip(1).collect();
 
 	// Parse arguments.
