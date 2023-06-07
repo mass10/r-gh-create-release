@@ -154,8 +154,16 @@ fn generate_new_tag(new_tag: &str) -> Result<String, Box<dyn std::error::Error>>
 }
 
 /// Launch gh command to create release.
-fn gh_release_create(dry_run: bool, new_tag: &str, title: &str, target: &str, notes: &str, files: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
-	info!("files: {:?}", files);
+fn gh_release_create(
+	dry_run: bool,
+	new_tag: &str,
+	title: &str,
+	target: &str,
+	notes: &str,
+	_determine_version_from: &str,
+	files: &Vec<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
+	info!("files: {:?}", &files);
 
 	let mut params: Vec<&str> = vec!["gh", "release", "create"];
 
@@ -199,7 +207,7 @@ fn gh_release_create(dry_run: bool, new_tag: &str, title: &str, target: &str, no
 	}
 
 	// ATTACHMENTS
-	for file in &files {
+	for file in files {
 		params.push(&file);
 	}
 
@@ -291,6 +299,14 @@ fn main() {
 	options.optflag("h", "help", "usage");
 	options.optflag("", "publish", "go publish");
 	options.optflag("", "dry-run", "dry run");
+	options.opt(
+		"",
+		"determine-version-from",
+		"Determines version string from file. (Cargo.toml, etc...)",
+		"STRING",
+		getopts::HasArg::Yes,
+		getopts::Occur::Optional,
+	);
 	options.opt("", "notes", "string", "STRING", getopts::HasArg::Yes, getopts::Occur::Optional);
 	options.opt("", "tag", "create release using tag.", "STRING", getopts::HasArg::Yes, getopts::Occur::Optional);
 	options.opt("", "title", "string", "STRING", getopts::HasArg::Yes, getopts::Occur::Optional);
@@ -337,8 +353,11 @@ fn main() {
 		// option: Attachments.
 		let files: Vec<String> = input.get_strings("file");
 
+		// Option: Determine version from file.
+		let determine_version_from = input.get_string("determine-version-from");
+
 		// Create release.
-		let result = gh_release_create(dry_run, &tag_name, &title, &target, &notes, files);
+		let result = gh_release_create(dry_run, &tag_name, &title, &target, &notes, &determine_version_from, &files);
 		if result.is_err() {
 			let reason = result.err().unwrap();
 			error!("{}", reason);
