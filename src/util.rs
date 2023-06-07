@@ -150,3 +150,57 @@ impl MatchHelper for getopts::Matches {
 		return self.opt_strs(name);
 	}
 }
+
+/// utilities for strings.
+pub trait StringUtility {
+	/// get string at index.
+	fn at(&self, index: usize) -> &str;
+}
+
+impl StringUtility for Vec<String> {
+	fn at(&self, index: usize) -> &str {
+		if self.len() <= index {
+			return "";
+		}
+		return &self[index];
+	}
+}
+
+pub fn matches(string_value: &str, expression: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+	let expression = regex::Regex::new(&expression);
+	if expression.is_err() {
+		error!("regex compilation error. {}", expression.err().unwrap());
+		return Err("Command exited with error.".into());
+	}
+	let expression = expression.unwrap();
+
+	// try to capture by "(...)".
+	let capture_result = expression.captures(&string_value);
+	if capture_result.is_none() {
+		info!("NOT MATCHED for expression [{}].", expression);
+		return Ok(Vec::new());
+	}
+
+	info!("MATCHED for expression [{}].", expression);
+
+	// capture result
+	let capture_result = capture_result.unwrap();
+
+	let mut result: Vec<String> = vec![];
+
+	let mut index = 0;
+
+	for e in capture_result.iter() {
+		if index == 0 {
+			// Skip the first element that is not a capture.
+			index += 1;
+			continue;
+		}
+		let matched = e.unwrap();
+		let string = matched.as_str().to_string();
+		result.push(string.to_string());
+		index += 1;
+	}
+
+	return Ok(result);
+}

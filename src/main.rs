@@ -67,49 +67,10 @@ fn get_gh_current_tag() -> Result<String, Box<dyn std::error::Error>> {
 	return Ok("".to_string());
 }
 
-fn matches(string_value: &str, expression: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-	let expression = regex::Regex::new(&expression);
-	if expression.is_err() {
-		error!("regex compilation error. {}", expression.err().unwrap());
-		return Err("Command exited with error.".into());
-	}
-	let expression = expression.unwrap();
-
-	// try to capture by "(...)".
-	let capture_result = expression.captures(&string_value);
-	if capture_result.is_none() {
-		info!("NOT MATCHED for expression [{}].", expression);
-		return Ok(Vec::new());
-	}
-
-	info!("MATCHED for expression [{}].", expression);
-
-	// capture result
-	let capture_result = capture_result.unwrap();
-
-	let mut result: Vec<String> = vec![];
-
-	let mut index = 0;
-
-	for e in capture_result.iter() {
-		if index == 0 {
-			// Skip the first element that is not a capture.
-			index += 1;
-			continue;
-		}
-		let matched = e.unwrap();
-		let string = matched.as_str().to_string();
-		result.push(string.to_string());
-		index += 1;
-	}
-
-	return Ok(result);
-}
-
 /// Generate a new tag from the current tag.
 fn generate_tag(tag: &str) -> Result<String, Box<dyn std::error::Error>> {
 	// version: v#.#.#
-	let part = matches(&tag, r"^v(\d+)\.(\d+)\.(\d+)$")?;
+	let part = util::matches(&tag, r"^v(\d+)\.(\d+)\.(\d+)$")?;
 	if part.len() == 3 {
 		let major: u32 = util::parse_uint(&part[0]);
 		let minor: u32 = util::parse_uint(&part[1]);
@@ -119,7 +80,7 @@ fn generate_tag(tag: &str) -> Result<String, Box<dyn std::error::Error>> {
 	};
 
 	// version: #.#.#
-	let part = matches(&tag, r"^(\d+)\.(\d+)\.(\d+)$")?;
+	let part = util::matches(&tag, r"^(\d+)\.(\d+)\.(\d+)$")?;
 	if part.len() == 3 {
 		let major: u32 = util::parse_uint(&part[0]);
 		let minor: u32 = util::parse_uint(&part[1]);
@@ -129,7 +90,7 @@ fn generate_tag(tag: &str) -> Result<String, Box<dyn std::error::Error>> {
 	};
 
 	// version: v#
-	let part = matches(&tag, r"^v(\d+)$")?;
+	let part = util::matches(&tag, r"^v(\d+)$")?;
 	if part.len() == 1 {
 		let major: u32 = util::parse_uint(&part[0]);
 		let next_tag = format!("v{}", major + 1);
@@ -137,7 +98,7 @@ fn generate_tag(tag: &str) -> Result<String, Box<dyn std::error::Error>> {
 	};
 
 	// version: #
-	let part = matches(&tag, r"^(\d+)$")?;
+	let part = util::matches(&tag, r"^(\d+)$")?;
 	if part.len() == 1 {
 		let major: u32 = util::parse_uint(&part[0]);
 		let next_tag = format!("{}", major + 1);
@@ -152,7 +113,7 @@ fn try_get_tag_name() -> Result<Option<String>, Box<dyn std::error::Error>> {
 	// May be Branch description or tag description.
 	let tag = util::getenv("GITHUB_REF");
 
-	let result = matches(&tag, r"^refs/tags/(.+)$")?;
+	let result = util::matches(&tag, r"^refs/tags/(.+)$")?;
 	if result.len() != 1 {
 		return Ok(None);
 	}
@@ -316,21 +277,6 @@ fn make_publish(dry_run: bool) -> Result<(), Box<dyn std::error::Error>> {
 	}
 
 	return Ok(());
-}
-
-/// utilities for strings.
-trait StringUtility {
-	/// get string at index.
-	fn at(&self, index: usize) -> &str;
-}
-
-impl StringUtility for Vec<String> {
-	fn at(&self, index: usize) -> &str {
-		if self.len() <= index {
-			return "";
-		}
-		return &self[index];
-	}
 }
 
 /// Entrypoint of Rust application.
