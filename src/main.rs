@@ -4,13 +4,11 @@
 
 mod util;
 
-use crate::util::{execute_command, get_current_timestamp, is_file, is_linux, is_windows};
-
 /// Query the latest tag of this repository.
 fn execute_gh_release_list() -> Result<String, Box<dyn std::error::Error>> {
 	green!("> gh release list");
 
-	if is_windows() {
+	if util::is_windows() {
 		let mut command = std::process::Command::new("gh.exe");
 		let result = command.args(&["release", "list"]).stderr(std::process::Stdio::inherit()).output()?;
 		if !result.status.success() {
@@ -21,7 +19,7 @@ fn execute_gh_release_list() -> Result<String, Box<dyn std::error::Error>> {
 		}
 		let stdout = String::from_utf8(result.stdout)?;
 		return Ok(stdout);
-	} else if is_linux() {
+	} else if util::is_linux() {
 		let mut command = std::process::Command::new("gh");
 		let result = command.args(&["release", "list"]).stderr(std::process::Stdio::inherit()).output()?;
 		if !result.status.success() {
@@ -69,15 +67,6 @@ fn get_gh_current_tag() -> Result<String, Box<dyn std::error::Error>> {
 	return Ok("".to_string());
 }
 
-fn parse_uint(text: &str) -> u32 {
-	let number: Result<u32, _> = text.parse();
-	if number.is_err() {
-		return 0;
-	}
-	let number = number.unwrap();
-	return number;
-}
-
 fn matches(string_value: &str, expression: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
 	let expression = regex::Regex::new(&expression);
 	if expression.is_err() {
@@ -122,9 +111,9 @@ fn generate_tag(tag: &str) -> Result<String, Box<dyn std::error::Error>> {
 	// version: v#.#.#
 	let part = matches(&tag, r"^v(\d+)\.(\d+)\.(\d+)$")?;
 	if part.len() == 3 {
-		let major: u32 = parse_uint(&part[0]);
-		let minor: u32 = parse_uint(&part[1]);
-		let patch: u32 = parse_uint(&part[2]);
+		let major: u32 = util::parse_uint(&part[0]);
+		let minor: u32 = util::parse_uint(&part[1]);
+		let patch: u32 = util::parse_uint(&part[2]);
 		let next_tag = format!("v{}.{}.{}", major, minor, patch + 1);
 		return Ok(next_tag);
 	};
@@ -132,9 +121,9 @@ fn generate_tag(tag: &str) -> Result<String, Box<dyn std::error::Error>> {
 	// version: #.#.#
 	let part = matches(&tag, r"^(\d+)\.(\d+)\.(\d+)$")?;
 	if part.len() == 3 {
-		let major: u32 = parse_uint(&part[0]);
-		let minor: u32 = parse_uint(&part[1]);
-		let patch: u32 = parse_uint(&part[2]);
+		let major: u32 = util::parse_uint(&part[0]);
+		let minor: u32 = util::parse_uint(&part[1]);
+		let patch: u32 = util::parse_uint(&part[2]);
 		let next_tag = format!("{}.{}.{}", major, minor, patch + 1);
 		return Ok(next_tag);
 	};
@@ -142,7 +131,7 @@ fn generate_tag(tag: &str) -> Result<String, Box<dyn std::error::Error>> {
 	// version: v#
 	let part = matches(&tag, r"^v(\d+)$")?;
 	if part.len() == 1 {
-		let major: u32 = parse_uint(&part[0]);
+		let major: u32 = util::parse_uint(&part[0]);
 		let next_tag = format!("v{}", major + 1);
 		return Ok(next_tag);
 	};
@@ -150,7 +139,7 @@ fn generate_tag(tag: &str) -> Result<String, Box<dyn std::error::Error>> {
 	// version: #
 	let part = matches(&tag, r"^(\d+)$")?;
 	if part.len() == 1 {
-		let major: u32 = parse_uint(&part[0]);
+		let major: u32 = util::parse_uint(&part[0]);
 		let next_tag = format!("{}", major + 1);
 		return Ok(next_tag);
 	};
@@ -158,32 +147,10 @@ fn generate_tag(tag: &str) -> Result<String, Box<dyn std::error::Error>> {
 	return Ok("".to_string());
 }
 
-fn straighten_command_string(params: &[&str]) -> String {
-	let mut result = String::new();
-	for param in params {
-		if result.len() > 0 {
-			result.push(' ');
-		}
-		if param.contains(" ") {
-			result.push('"');
-			result.push_str(param);
-			result.push('"');
-			continue;
-		}
-		result.push_str(param);
-	}
-	return result;
-}
-
-fn getenv(name: &str) -> String {
-	let result = std::env::var(name);
-	return result.unwrap_or_default();
-}
-
 /// Try to get the tag name from the environment variable GITHUB_REF.
 fn try_get_tag_name() -> Result<Option<String>, Box<dyn std::error::Error>> {
 	// May be Branch description or tag description.
-	let tag = getenv("GITHUB_REF");
+	let tag = util::getenv("GITHUB_REF");
 
 	let result = matches(&tag, r"^refs/tags/(.+)$")?;
 	if result.len() != 1 {
@@ -236,7 +203,7 @@ fn gh_release_create(dry_run: bool, new_tag: &str, title: &str, target: &str, no
 	// TITLE
 	params.push("--title");
 	let release_title = if title == "" {
-		let value = format!("{}, release, {}", &next_tag, get_current_timestamp());
+		let value = format!("{}, release, {}", &next_tag, util::get_current_timestamp());
 		value
 	} else {
 		title.to_string()
@@ -259,7 +226,7 @@ fn gh_release_create(dry_run: bool, new_tag: &str, title: &str, target: &str, no
 	if notes == "" {
 		// Generate release notes automatically.
 		params.push("--generate-notes");
-	} else if is_file(notes) {
+	} else if util::is_file(notes) {
 		// Argument is file path.
 		params.push("--notes-file");
 		params.push(notes);
@@ -278,12 +245,12 @@ fn gh_release_create(dry_run: bool, new_tag: &str, title: &str, target: &str, no
 		// Dry run.
 		info!("CREATING RELEASE... (DRY-RUN)");
 
-		let command_string = straighten_command_string(&params);
+		let command_string = util::straighten_command_string(&params);
 		green!("> {}", &command_string);
 	} else {
 		info!("CREATING RELEASE...");
 
-		execute_command(&params)?;
+		util::execute_command(&params)?;
 	}
 
 	return Ok(());
@@ -319,7 +286,7 @@ fn build_myself() -> Result<(), Box<dyn std::error::Error>> {
 	info!("BUILDING...");
 
 	// win/linux
-	execute_command(&["cargo", "build", "--quiet", "--release"])?;
+	util::execute_command(&["cargo", "build", "--quiet", "--release"])?;
 
 	return Ok(());
 }
@@ -333,7 +300,7 @@ fn make_publish(dry_run: bool) -> Result<(), Box<dyn std::error::Error>> {
 	if dry_run {
 		info!("PUBLISHING... (DRY-RUN)");
 
-		if is_windows() {
+		if util::is_windows() {
 			println!(
 				"cargo.exe run --quiet --release -- --title {} --file target\\release\\r-gh-create-release.exe",
 				&crate_version
@@ -347,8 +314,8 @@ fn make_publish(dry_run: bool) -> Result<(), Box<dyn std::error::Error>> {
 	} else {
 		info!("PUBLISHING...");
 
-		if is_windows() {
-			execute_command(&[
+		if util::is_windows() {
+			util::execute_command(&[
 				"cargo.exe",
 				"run",
 				"--quiet",
@@ -360,7 +327,7 @@ fn make_publish(dry_run: bool) -> Result<(), Box<dyn std::error::Error>> {
 				"target\\release\\r-gh-create-release.exe",
 			])?;
 		} else {
-			execute_command(&[
+			util::execute_command(&[
 				"cargo",
 				"run",
 				"--quiet",

@@ -91,3 +91,34 @@ pub fn execute_command(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> 
 
 	return Ok(());
 }
+
+pub fn parse_uint(text: &str) -> u32 {
+	let number: Result<u32, _> = text.parse();
+	if number.is_err() {
+		return 0;
+	}
+	let number = number.unwrap();
+	return number;
+}
+
+pub fn straighten_command_string(params: &[&str]) -> String {
+	let mut result = String::new();
+	for param in params {
+		if result.len() > 0 {
+			result.push(' ');
+		}
+		if param.contains(" ") {
+			result.push('"');
+			result.push_str(param);
+			result.push('"');
+			continue;
+		}
+		result.push_str(param);
+	}
+	return result;
+}
+
+pub fn getenv(name: &str) -> String {
+	let result = std::env::var(name);
+	return result.unwrap_or_default();
+}
