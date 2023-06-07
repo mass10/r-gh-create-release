@@ -2,6 +2,24 @@
 
 A wrapper utility of `gh release`.
 
+
+# Usage
+
+```
+Options:
+    -h, --help          usage
+        --publish       go publish
+        --dry-run       dry run
+        --determine-version-from STRING
+                        Determines version string from file. (Cargo.toml,
+                        etc...)
+        --notes STRING  string
+        --tag STRING    create release using tag.
+        --title STRING  string
+        --target STRING string
+        --file ARRAY    string
+```
+
 # Examples
 
 ### Create release with 1 attachment from your main branch.
