@@ -121,6 +121,7 @@ fn try_get_tag_name() -> Result<Option<String>, Box<dyn std::error::Error>> {
 	return Ok(Some(result[0].clone()));
 }
 
+/// Determine a tag for the next release.
 fn generate_new_tag(new_tag: &str) -> Result<String, Box<dyn std::error::Error>> {
 	if new_tag != "" {
 		info!("NEXT TAG: [{}]", new_tag);
