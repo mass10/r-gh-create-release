@@ -3,10 +3,9 @@
 A wrapper utility of `gh release`.
 
 
-# Usage
+# Commandline options.
 
 ```
-Options:
     -h, --help          usage
         --publish       go publish
         --dry-run       dry run
