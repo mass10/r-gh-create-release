@@ -4,32 +4,31 @@
 
 mod util;
 
+/// Launch external command and return stdout.
+fn spawn_command(command: &[&str]) -> Result<String, Box<dyn std::error::Error>> {
+	let (path, args) = command.split_first().unwrap();
+	let mut command = std::process::Command::new(&path);
+	let result = command.args(args).stderr(std::process::Stdio::inherit()).output()?;
+	if !result.status.success() {
+		let code = result.status.code().unwrap();
+		error!("process exited with code {}.", code);
+		error!("Failed to retrieve the latest tag of the repository in github.com.");
+		return Err("Command exited with error.".into());
+	}
+	let stdout = String::from_utf8(result.stdout)?;
+	return Ok(stdout);
+}
+
 /// Query the latest tag of this repository.
 fn execute_gh_release_list() -> Result<String, Box<dyn std::error::Error>> {
 	green!("> gh release list");
 
 	if util::is_windows() {
-		let mut command = std::process::Command::new("gh.exe");
-		let result = command.args(&["release", "list"]).stderr(std::process::Stdio::inherit()).output()?;
-		if !result.status.success() {
-			let code = result.status.code().unwrap();
-			error!("process exited with code {}.", code);
-			error!("Failed to retrieve the latest tag of the repository in github.com.");
-			return Err("Command exited with error.".into());
-		}
-		let stdout = String::from_utf8(result.stdout)?;
-		return Ok(stdout);
+		let command = ["gh.exe", "release", "list", "--exclude-drafts", "--exclude-pre-releases"];
+		return spawn_command(&command);
 	} else if util::is_linux() {
-		let mut command = std::process::Command::new("gh");
-		let result = command.args(&["release", "list"]).stderr(std::process::Stdio::inherit()).output()?;
-		if !result.status.success() {
-			let code = result.status.code().unwrap();
-			error!("process exited with code {}.", code);
-			error!("Failed to retrieve the latest tag of the repository in github.com.");
-			return Err("Command exited with error.".into());
-		}
-		let stdout = String::from_utf8(result.stdout)?;
-		return Ok(stdout);
+		let command = ["gh", "release", "list", "--exclude-drafts", "--exclude-pre-releases"];
+		return spawn_command(&command);
 	} else {
 		return Err("Unsupported OS.".into());
 	}
