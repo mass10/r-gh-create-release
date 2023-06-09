@@ -345,7 +345,7 @@ fn main() {
 	}
 	let input = result.unwrap();
 
-	// Option: Dry run.
+	// option: Dry run.
 	let dry_run = input.opt_present("dry-run");
 
 	if input.opt_present("help") {
@@ -362,7 +362,7 @@ fn main() {
 		}
 	} else {
 		// ========== DEFAULT: CREATE RELEASE ==========
-		// Option: Use tag.
+		// option: Use tag.
 		let tag_name = input.get_string("tag");
 
 		// option: Release title.
@@ -378,7 +378,7 @@ fn main() {
 		// option: Attachments.
 		let files: Vec<String> = input.get_strings("file");
 
-		// Option: Determine version from file.
+		// option: Determine version from file.
 		let determine_version_from = input.get_string("determine-version-from");
 
 		// Create release.
