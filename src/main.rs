@@ -122,7 +122,21 @@ fn try_get_tag_name() -> Result<Option<String>, Box<dyn std::error::Error>> {
 }
 
 /// Determine a tag for the next release.
-fn generate_new_tag(new_tag: &str) -> Result<String, Box<dyn std::error::Error>> {
+fn generate_new_tag(determine_version_from: &str, new_tag: &str) -> Result<String, Box<dyn std::error::Error>> {
+	if determine_version_from != "" {
+		info!("DETERMINING VERSION FROM: [{}]", determine_version_from);
+		info!("Trying to read file ... [{}]", determine_version_from);
+
+		// Try to read Cargo.toml.
+		if let Some(toml) = util::try_read_cargo_toml(determine_version_from)? {
+			let next_tag = toml.package.version;
+			return Ok(next_tag);
+		}
+
+		let message = format!("Unknown type of file [{}].", determine_version_from);
+		return Err(message.into());
+	}
+
 	if new_tag != "" {
 		info!("NEXT TAG: [{}]", new_tag);
 
@@ -160,14 +174,17 @@ fn gh_release_create(
 	title: &str,
 	target: &str,
 	notes: &str,
-	_determine_version_from: &str,
+	determine_version_from: &str,
 	files: &Vec<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	info!("files: {:?}", &files);
 
-	let mut params: Vec<&str> = vec!["gh", "release", "create"];
+	let mut params: Vec<&str> = vec![];
+	params.push("gh");
+	params.push("release");
+	params.push("create");
 
-	let next_tag = generate_new_tag(new_tag)?;
+	let next_tag = generate_new_tag(determine_version_from, new_tag)?;
 	params.push(&next_tag);
 
 	// TITLE

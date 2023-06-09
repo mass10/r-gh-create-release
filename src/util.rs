@@ -166,6 +166,7 @@ impl StringUtility for Vec<String> {
 	}
 }
 
+/// Capture by regexpression matching.
 pub fn matches(string_value: &str, expression: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
 	let expression = regex::Regex::new(&expression);
 	if expression.is_err() {
@@ -203,4 +204,37 @@ pub fn matches(string_value: &str, expression: &str) -> Result<Vec<String>, Box<
 	}
 
 	return Ok(result);
+}
+
+/// Cargo.toml structure definition.
+#[derive(serde_derive::Deserialize, std::fmt::Debug)]
+pub struct CargoTomlPackage {
+	/// Package name
+	pub name: String,
+	/// Package version
+	pub version: String,
+}
+
+#[derive(serde_derive::Deserialize, std::fmt::Debug)]
+pub struct CargoToml {
+	/// [package] section.
+	pub package: CargoTomlPackage,
+}
+
+/// Cargo.toml parser.
+pub fn try_read_cargo_toml(path: &str) -> Result<Option<CargoToml>, Box<dyn std::error::Error>> {
+	if !path.to_lowercase().ends_with(".toml") {
+		return Ok(None);
+	}
+
+	let path = std::path::Path::new(path);
+	if !path.exists() {
+		return Err("File not found.".into());
+	}
+
+	let text = std::fs::read_to_string(path)?;
+
+	let conf: CargoToml = toml::from_str(&text)?;
+
+	return Ok(Some(conf));
 }
