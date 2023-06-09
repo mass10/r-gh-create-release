@@ -15,8 +15,7 @@ fn spawn_command(command: &[&str]) -> Result<String, Box<dyn std::error::Error>>
 	if !result.status.success() {
 		let code = result.status.code().unwrap();
 		error!("process exited with code {}.", code);
-		error!("Failed to retrieve the latest tag of the repository in github.com.");
-		return Err("Command exited with error.".into());
+		return Err("Failed to retrieve the latest tag of the repository in github.com.".into());
 	}
 	let stdout = String::from_utf8(result.stdout)?;
 	return Ok(stdout);
@@ -144,8 +143,7 @@ fn generate_new_tag(determine_version_from: &str, new_tag: &str) -> Result<Strin
 	} else if let Some(tag_name) = try_get_tag_name()? {
 		// GITHUB_REF_NAME exists. Triggered by tagging on GitHub Actions.
 		if tag_name == "" {
-			error!("GITHUB_REF_NAME is empty.");
-			return Err("Command exited with error.".into());
+			return Err("GITHUB_REF_NAME is empty.".into());
 		}
 
 		info!("NEXT TAG: [{}]", &tag_name);
@@ -305,6 +303,16 @@ fn make_publish(dry_run: bool) -> Result<(), Box<dyn std::error::Error>> {
 	return Ok(());
 }
 
+/// Report error.
+fn report_error(error: Box<dyn std::error::Error>) {
+	let reason = error.to_string();
+	if reason == "" {
+		// Information must be already logged.
+		return;
+	}
+	error!("{}", reason);
+}
+
 /// Entrypoint of Rust application.
 fn main() {
 	use util::MatchHelper;
@@ -376,8 +384,7 @@ fn main() {
 		// Create release.
 		let result = gh_release_create(dry_run, &tag_name, &title, &target, &notes, &determine_version_from, &files);
 		if result.is_err() {
-			let reason = result.err().unwrap();
-			error!("{}", reason);
+			report_error(result.err().unwrap());
 			std::process::exit(1);
 		}
 	}
