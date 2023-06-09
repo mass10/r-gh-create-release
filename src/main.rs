@@ -4,31 +4,14 @@
 
 mod util;
 
-/// Launch external command and return stdout.
-fn spawn_command(command: &[&str]) -> Result<String, Box<dyn std::error::Error>> {
-	let command_string = util::straighten_command_string(&command);
-	green!("> {}", &command_string);
-
-	let (path, args) = command.split_first().unwrap();
-	let mut process = std::process::Command::new(&path);
-	let result = process.args(args).stderr(std::process::Stdio::inherit()).output()?;
-	if !result.status.success() {
-		let code = result.status.code().unwrap();
-		error!("process exited with code {}.", code);
-		return Err("Failed to retrieve the latest tag of the repository in github.com.".into());
-	}
-	let stdout = String::from_utf8(result.stdout)?;
-	return Ok(stdout);
-}
-
 /// Query the latest tag of this repository.
 fn execute_gh_release_list() -> Result<String, Box<dyn std::error::Error>> {
 	if util::is_windows() {
 		let command = ["gh.exe", "release", "list", "--exclude-drafts", "--exclude-pre-releases"];
-		return spawn_command(&command);
+		return util::spawn_command(&command);
 	} else if util::is_linux() {
 		let command = ["gh", "release", "list", "--exclude-drafts", "--exclude-pre-releases"];
-		return spawn_command(&command);
+		return util::spawn_command(&command);
 	} else {
 		return Err("Unsupported OS.".into());
 	}
@@ -306,11 +289,10 @@ fn make_publish(dry_run: bool) -> Result<(), Box<dyn std::error::Error>> {
 /// Report error.
 fn report_error(error: Box<dyn std::error::Error>) {
 	let reason = error.to_string();
-	if reason == "" {
-		// Information must be already logged.
-		return;
+	if reason != "" {
+		error!("{}", reason);
 	}
-	error!("{}", reason);
+	info!("Command exited with error.");
 }
 
 /// Entrypoint of Rust application.

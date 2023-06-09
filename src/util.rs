@@ -68,8 +68,7 @@ pub fn execute_command(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> 
 		if !result.success() {
 			let code = result.code().unwrap();
 			error!("process exited with code {}.", code);
-			error!("Failed to execute command.");
-			return Err("Command exited with error.".into());
+			return Err("".into());
 		}
 
 		info!("process exited with code: {}", result.code().unwrap());
@@ -80,8 +79,7 @@ pub fn execute_command(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> 
 		if !result.success() {
 			let code = result.code().unwrap();
 			error!("process exited with code {}.", code);
-			error!("Failed to execute command.");
-			return Err("Command exited with error.".into());
+			return Err("".into());
 		}
 
 		info!("process exited with code: {}", result.code().unwrap());
@@ -90,6 +88,23 @@ pub fn execute_command(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> 
 	}
 
 	return Ok(());
+}
+
+/// Launch external command and return stdout.
+pub fn spawn_command(command: &[&str]) -> Result<String, Box<dyn std::error::Error>> {
+	let command_string = straighten_command_string(&command);
+	green!("> {}", &command_string);
+
+	let (path, args) = command.split_first().unwrap();
+	let mut process = std::process::Command::new(&path);
+	let result = process.args(args).stderr(std::process::Stdio::inherit()).output()?;
+	if !result.status.success() {
+		let code = result.status.code().unwrap();
+		error!("process exited with code {}.", code);
+		return Err("Failed to retrieve the latest tag of the repository in github.com.".into());
+	}
+	let stdout = String::from_utf8(result.stdout)?;
+	return Ok(stdout);
 }
 
 /// strtoul.
@@ -171,7 +186,7 @@ pub fn matches(string_value: &str, expression: &str) -> Result<Vec<String>, Box<
 	let expression = regex::Regex::new(&expression);
 	if expression.is_err() {
 		error!("regex compilation error. {}", expression.err().unwrap());
-		return Err("Command exited with error.".into());
+		return Err("".into());
 	}
 	let expression = expression.unwrap();
 
