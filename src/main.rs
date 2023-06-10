@@ -149,15 +149,7 @@ fn generate_new_tag(determine_version_from: &str, new_tag: &str) -> Result<Strin
 }
 
 /// Launch gh command to create release.
-fn gh_release_create(
-	dry_run: bool,
-	new_tag: &str,
-	title: &str,
-	target: &str,
-	notes: &str,
-	determine_version_from: &str,
-	files: &Vec<String>,
-) -> Result<(), Box<dyn std::error::Error>> {
+fn gh_release_create(dry_run: bool, new_tag: &str, title: &str, target: &str, notes: &str, determine_version_from: &str, files: &Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
 	info!("files: {:?}", &files);
 
 	let mut params: Vec<&str> = vec![];
@@ -237,50 +229,26 @@ fn build_myself() -> Result<(), Box<dyn std::error::Error>> {
 fn make_publish(dry_run: bool) -> Result<(), Box<dyn std::error::Error>> {
 	build_myself()?;
 
+	// Crate version. (ex: 0.1.0)
 	let crate_version = env!("CARGO_PKG_VERSION");
+
+	// Executing file path.
+	let executing_path = std::env::current_exe()?;
+	let executing_path = executing_path.to_str().unwrap();
+
+	let cargo_exe = if util::is_windows() { "cargo.exe" } else { "cargo" };
+
+	let command = [cargo_exe, "run", "--quiet", "--release", "--", "--title", crate_version, "--file", executing_path];
 
 	if dry_run {
 		info!("PUBLISHING... (DRY-RUN)");
 
-		if util::is_windows() {
-			println!(
-				"cargo.exe run --quiet --release -- --title {} --file target\\release\\r-gh-create-release.exe",
-				&crate_version
-			);
-		} else {
-			println!(
-				"cargo run --quiet --release -- --title {} --file target/release/r-gh-create-release",
-				&crate_version
-			);
-		}
+		let command_string = util::straighten_command_string(&command);
+		println!("{}", &command_string);
 	} else {
 		info!("PUBLISHING...");
 
-		if util::is_windows() {
-			util::execute_command(&[
-				"cargo.exe",
-				"run",
-				"--quiet",
-				"--release",
-				"--",
-				"--title",
-				&crate_version,
-				"--file",
-				"target\\release\\r-gh-create-release.exe",
-			])?;
-		} else {
-			util::execute_command(&[
-				"cargo",
-				"run",
-				"--quiet",
-				"--release",
-				"--",
-				"--title",
-				&crate_version,
-				"--file",
-				"target/release/r-gh-create-release",
-			])?;
-		}
+		util::execute_command(&command)?;
 	}
 
 	return Ok(());
