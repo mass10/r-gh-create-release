@@ -6,15 +6,11 @@ mod util;
 
 /// Query the latest tag of this repository.
 fn execute_gh_release_list() -> Result<String, Box<dyn std::error::Error>> {
-	if util::is_windows() {
-		let command = ["gh.exe", "release", "list", "--exclude-drafts", "--exclude-pre-releases"];
-		return util::spawn_command(&command);
-	} else if util::is_linux() {
-		let command = ["gh", "release", "list", "--exclude-drafts", "--exclude-pre-releases"];
-		return util::spawn_command(&command);
-	} else {
-		return Err("Unsupported OS.".into());
-	}
+	let gh_exe = if util::is_windows() { "gh.exe" } else { "gh" };
+
+	let command = [gh_exe, "release", "list", "--exclude-drafts", "--exclude-pre-releases"];
+
+	return util::spawn_command(&command);
 }
 
 /// Retrieve latest tag from gh command.
@@ -226,7 +222,7 @@ fn build_myself() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// create release to publish.
-fn make_publish(dry_run: bool) -> Result<(), Box<dyn std::error::Error>> {
+fn make_self_published(dry_run: bool) -> Result<(), Box<dyn std::error::Error>> {
 	build_myself()?;
 
 	// Crate version. (ex: 0.1.0)
@@ -304,7 +300,7 @@ fn main() {
 	} else if input.opt_present("publish") {
 		// ========== OPTIONAL: MAKE PUBLISH SELF ==========
 		// Build once in release, and make self publish.
-		let result = make_publish(dry_run);
+		let result = make_self_published(dry_run);
 		if result.is_err() {
 			report_error(result.err().unwrap());
 			std::process::exit(1);
