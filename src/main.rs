@@ -306,8 +306,7 @@ fn main() {
 		// Build once in release, and make self publish.
 		let result = make_publish(dry_run);
 		if result.is_err() {
-			let reason = result.err().unwrap();
-			error!("{}", reason);
+			report_error(result.err().unwrap());
 			std::process::exit(1);
 		}
 	} else {
