@@ -148,8 +148,10 @@ fn generate_new_tag(determine_version_from: &str, new_tag: &str) -> Result<Strin
 fn gh_release_create(dry_run: bool, new_tag: &str, title: &str, target: &str, notes: &str, determine_version_from: &str, files: &Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
 	info!("files: {:?}", &files);
 
+	let gh_exe = if util::is_windows() { "gh.exe" } else { "gh" };
+
 	let mut params: Vec<&str> = vec![];
-	params.push("gh");
+	params.push(gh_exe);
 	params.push("release");
 	params.push("create");
 
@@ -201,8 +203,7 @@ fn gh_release_create(dry_run: bool, new_tag: &str, title: &str, target: &str, no
 		// Dry run.
 		info!("CREATING RELEASE... (DRY-RUN)");
 
-		let command_string = util::straighten_command_string(&params);
-		green!("> {}", &command_string);
+		green!("> {}", util::straighten_command_string(&params));
 	} else {
 		info!("CREATING RELEASE...");
 
