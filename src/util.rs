@@ -50,6 +50,7 @@ pub fn is_windows() -> bool {
 }
 
 /// Whether if the current OS is Linux.
+#[allow(unused)]
 pub fn is_linux() -> bool {
 	return cfg!(target_os = "linux");
 }
@@ -61,31 +62,16 @@ pub fn execute_command(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> 
 		green!("> {}", string);
 	}
 
-	if is_windows() {
-		let (cmd_name, args) = args.split_first().unwrap();
-		let mut command = std::process::Command::new(cmd_name);
-		let result = command.args(args).spawn()?.wait()?;
-		if !result.success() {
-			let code = result.code().unwrap();
-			error!("process exited with code {}.", code);
-			return Err("".into());
-		}
-
-		info!("process exited with code: {}", result.code().unwrap());
-	} else if is_linux() {
-		let (cmd_name, args) = args.split_first().unwrap();
-		let mut command = std::process::Command::new(cmd_name);
-		let result = command.args(args).spawn()?.wait()?;
-		if !result.success() {
-			let code = result.code().unwrap();
-			error!("process exited with code {}.", code);
-			return Err("".into());
-		}
-
-		info!("process exited with code: {}", result.code().unwrap());
-	} else {
-		return Err("Unsupported OS.".into());
+	let (command_path, args) = args.split_first().unwrap();
+	let mut command = std::process::Command::new(command_path);
+	let result = command.args(args).spawn()?.wait()?;
+	if !result.success() {
+		let code = result.code().unwrap();
+		error!("process exited with code {}.", code);
+		return Err("".into());
 	}
+
+	info!("process exited with code: {}", result.code().unwrap());
 
 	return Ok(());
 }
