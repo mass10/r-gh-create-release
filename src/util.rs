@@ -57,10 +57,7 @@ pub fn is_linux() -> bool {
 
 /// Execute command in shell.
 pub fn execute_command(args: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
-	{
-		let string = args.join(" ");
-		green!("> {}", string);
-	}
+	green!("> {}", self::straighten_command_string(&args));
 
 	let (command_path, args) = args.split_first().unwrap();
 	let mut command = std::process::Command::new(command_path);
