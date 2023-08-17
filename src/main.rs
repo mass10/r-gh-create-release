@@ -100,26 +100,23 @@ fn try_get_tag_name() -> Result<Option<String>, Box<dyn std::error::Error>> {
 }
 
 /// Determine a tag for the next release.
-fn generate_new_tag(determine_version_from: &str, new_tag: &str) -> Result<String, Box<dyn std::error::Error>> {
-	if determine_version_from != "" {
-		info!("DETERMINING VERSION FROM: [{}]", determine_version_from);
-		info!("Trying to read file ... [{}]", determine_version_from);
+fn try_determine_version_from(path: &str) -> Result<String, Box<dyn std::error::Error>> {
+	info!("DETERMINING VERSION FROM: [{}]", path);
+	info!("Trying to read file ... [{}]", path);
 
-		// Try to read Cargo.toml.
-		if let Some(toml) = util::try_read_cargo_toml(determine_version_from)? {
-			let next_tag = toml.package.version;
-			return Ok(next_tag);
-		}
-
-		let message = format!("Unknown type of file [{}].", determine_version_from);
-		return Err(message.into());
+	// Try to read version from Cargo.toml.
+	if let Some(toml) = util::try_read_cargo_toml(path)? {
+		let next_tag = toml.package.version;
+		return Ok(next_tag);
 	}
 
-	if new_tag != "" {
-		info!("NEXT TAG: [{}]", new_tag);
+	let message = format!("Unknown type of file [{}].", path);
+	return Err(message.into());
+}
 
-		return Ok(new_tag.to_string());
-	} else if let Some(tag_name) = try_get_tag_name()? {
+/// Determine a tag for the next release.
+fn generate_new_tag() -> Result<String, Box<dyn std::error::Error>> {
+	if let Some(tag_name) = try_get_tag_name()? {
 		// GITHUB_REF_NAME exists. Triggered by tagging on GitHub Actions.
 		if tag_name == "" {
 			return Err("GITHUB_REF_NAME is empty.".into());
@@ -155,7 +152,17 @@ fn gh_release_create(dry_run: bool, new_tag: &str, title: &str, target: &str, no
 	params.push("release");
 	params.push("create");
 
-	let next_tag = generate_new_tag(determine_version_from, new_tag)?;
+	// Determine release tag.
+	let next_tag = if new_tag != "" {
+		// Use specified tag.
+		new_tag.to_string()
+	} else if determine_version_from != "" {
+		// Determine version from file.
+		try_determine_version_from(determine_version_from)?
+	} else {
+		// Generate new tag.
+		generate_new_tag()?
+	};
 	params.push(&next_tag);
 
 	// TITLE
@@ -260,13 +267,8 @@ fn report_error(error: Box<dyn std::error::Error>) {
 	info!("Command exited with error.");
 }
 
-/// Entrypoint of Rust application.
-fn main() {
-	use util::MatchHelper;
-
-	let args: Vec<String> = std::env::args().skip(1).collect();
-
-	// Parse arguments.
+/// Create commandline options.
+fn create_commandline_options() -> getopts::Options {
 	let mut options = getopts::Options::new();
 	options.optflag("h", "help", "usage");
 	options.optflag("", "publish", "go publish");
@@ -285,6 +287,17 @@ fn main() {
 	options.opt("", "target", "string", "STRING", getopts::HasArg::Yes, getopts::Occur::Optional);
 	options.opt("", "file", "string", "ARRAY", getopts::HasArg::Yes, getopts::Occur::Multi);
 
+	return options;
+}
+
+/// Entrypoint of Rust application.
+fn main() {
+	use util::MatchHelper;
+
+	let args: Vec<String> = std::env::args().skip(1).collect();
+
+	// Parse arguments.
+	let options = create_commandline_options();
 	let result = options.parse(args);
 	if result.is_err() {
 		eprint!("{}", options.usage(""));
