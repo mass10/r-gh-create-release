@@ -47,7 +47,9 @@ fn main() {
 	let options = create_commandline_options();
 	let result = options.parse(args);
 	if result.is_err() {
-		eprint!("{}", options.usage(""));
+		let pkg_name = env!("CARGO_PKG_NAME");
+		let head = format!("{}: create github release", pkg_name);
+		eprint!("{}", options.usage(&head));
 		std::process::exit(1);
 	}
 	let input = result.unwrap();
@@ -57,7 +59,9 @@ fn main() {
 
 	if input.opt_present("help") {
 		// ========== OPTIONAL: SHOW HELP ==========
-		eprintln!("{}", options.usage(""));
+		let pkg_name = env!("CARGO_PKG_NAME");
+		let head = format!("{}: create github release", pkg_name);
+		eprint!("{}", options.usage(&head));
 	} else if input.opt_present("publish") {
 		// ========== OPTIONAL: MAKE PUBLISH SELF ==========
 		// Build once in release, and make self publish.
