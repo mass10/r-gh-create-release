@@ -42,9 +42,9 @@ jobs:
               "https://api.github.com/repos/${{ github.repository }}/actions/artifacts" -d "{""name"":""artifacts""}"
         # CARGO PUBLISH
       - name: release
-        run: cargo publish
+        run: cargo publish --token ${CRATES_IO_TOKEN}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
 
   # FOR WINDOWS
   build-on-windows:
