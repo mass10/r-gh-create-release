@@ -14,8 +14,8 @@ jobs:
         runs-on: windows-latest
         needs: [build-on-windows, build-on-linux]
         permissions:
-          # "write" permission is required to create a release. (NO NEED to grant at repository settings.)
-          contents: write
+            # "write" permission is required to create a release. (NO NEED to grant at repository settings.)
+            contents: write
         steps:
             # ========== CHECKOUT REPOSITORY ==========
           - name: Checkout
@@ -45,7 +45,7 @@ jobs:
                 "https://api.github.com/repos/${{ github.repository }}/actions/artifacts" -d "{""name"":""artifacts""}"
 
             # ========== CARGO PUBLISH ==========
-          - name: release
+          - name: Publish on crates.io
             run: cargo publish --token "${{ secrets.CRATES_IO_TOKEN }}"
 
     # FOR WINDOWS

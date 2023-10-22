@@ -1,7 +1,7 @@
 [package]
 name = "r-gh-create-release"
 description = "gh release wrapper CLI"
-version = "1.0.49"
+version = "1.0.50"
 license = "MIT"
 authors = ["Irisawa Masaru <irisawa.masaru@gmail.com>"]
 edition = "2021"
