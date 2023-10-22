@@ -1,7 +1,7 @@
 [package]
 name = "r-gh-create-release"
 description = "gh release wrapper CLI"
-version = "1.0.48"
+version = "1.0.49"
 license = "MIT"
 authors = ["Irisawa Masaru <irisawa.masaru@gmail.com>"]
 edition = "2021"
@@ -18,10 +18,9 @@ include = [
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-getopts = "*"
-rand = "*"
-chrono = "*"
-regex = "*"
-toml = "*"
-serde = "*"
-serde_derive = "*"
+getopts = "^0.2.21"
+chrono = "^0.4.24"
+regex = "^1.8.2"
+toml = "^0.7.4"
+serde = "^1.0.164"
+serde_derive = "^1.0.164"
