@@ -6,9 +6,10 @@ A wrapper utility of `gh release`.
 # Commandline options.
 
 ```
-    -h, --help          usage
-        --publish       go publish
-        --dry-run       dry run
+    -h, --help          Show usage.
+        --publish       Create a new release of gh-create-release. (For
+                        maintenance)
+        --dry-run       dry run.
         --determine-version-from STRING
                         Determines version string from file. (Cargo.toml,
                         etc...)
