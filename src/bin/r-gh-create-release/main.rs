@@ -17,9 +17,9 @@ fn report_error(error: Box<dyn std::error::Error>) {
 /// Create commandline options.
 fn create_commandline_options() -> getopts::Options {
 	let mut options = getopts::Options::new();
-	options.optflag("h", "help", "usage");
-	options.optflag("", "publish", "go publish");
-	options.optflag("", "dry-run", "dry run");
+	options.optflag("h", "help", "Show usage.");
+	options.optflag("", "publish", "Create a new release of gh-create-release. (For maintenance)");
+	options.optflag("", "dry-run", "dry run.");
 	options.opt(
 		"",
 		"determine-version-from",
@@ -37,6 +37,13 @@ fn create_commandline_options() -> getopts::Options {
 	return options;
 }
 
+/// Show usage.
+fn usage(options: &getopts::Options) {
+	let pkg_name = env!("CARGO_PKG_NAME");
+	let head = format!("{}: create github release", pkg_name);
+	eprint!("{}", options.usage(&head));
+}
+
 /// Entrypoint of Rust application.
 fn main() {
 	use util::MatchHelper;
@@ -47,9 +54,10 @@ fn main() {
 	let options = create_commandline_options();
 	let result = options.parse(args);
 	if result.is_err() {
-		let pkg_name = env!("CARGO_PKG_NAME");
-		let head = format!("{}: create github release", pkg_name);
-		eprint!("{}", options.usage(&head));
+		let error = result.err().unwrap();
+		eprintln!("{}", error);
+		eprintln!();
+		usage(&options);
 		std::process::exit(1);
 	}
 	let input = result.unwrap();
@@ -59,11 +67,9 @@ fn main() {
 
 	if input.opt_present("help") {
 		// ========== OPTIONAL: SHOW HELP ==========
-		let pkg_name = env!("CARGO_PKG_NAME");
-		let head = format!("{}: create github release", pkg_name);
-		eprint!("{}", options.usage(&head));
+		usage(&options);
 	} else if input.opt_present("publish") {
-		// ========== OPTIONAL: MAKE PUBLISH SELF ==========
+		// ========== OPTIONAL: MAKE PUBLISH SELF (FOR MAINTENANCE) ==========
 		// Build once in release, and make self publish.
 		let result = application::make_self_published(dry_run);
 		if result.is_err() {
