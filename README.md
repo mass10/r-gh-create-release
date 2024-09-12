@@ -2,6 +2,11 @@
 
 A wrapper utility of `gh release`.
 
+# Getting Started
+
+* Latest versions are available [here](https://github.com/mass10/r-gh-create-release/releases)
+  * [Portable binary for Windows](https://github.com/mass10/r-gh-create-release/releases/latest/download/r-gh-create-release.exe)
+  * [Portable binary for Linux](https://github.com/mass10/r-gh-create-release/releases/latest/download/r-gh-create-release)
 
 # Commandline options.
 
@@ -54,10 +59,3 @@ r-gh-create-release --notes path/to/your/notes.txt --file path/to/your/app
 r-gh-create-release --target your-branch-name --file path/to/your/app
 ```
 
-# Download
-
-* Latest versions are available here
-  * Windows  
-    https://github.com/mass10/r-gh-create-release/releases/latest/download/r-gh-create-release.exe
-  * Linux  
-    https://github.com/mass10/r-gh-create-release/releases/latest/download/r-gh-create-release
