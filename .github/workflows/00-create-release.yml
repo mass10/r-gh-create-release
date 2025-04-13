@@ -27,7 +27,13 @@ jobs:
           - name: Download artifacts
             uses: actions/download-artifact@v2
             with:
-                name: my-temporary-artifacts
+                name: my-temporary-artifacts-win
+
+            # ========== DOWNLOAD ARTIFACTS ==========
+          - name: Download artifacts
+            uses: actions/download-artifact@v2
+            with:
+                name: my-temporary-artifacts-linux
 
             # ========== CREATE RELEASE AND UPLOAD EXECUTABLE FILE ==========
           - name: Create release
@@ -66,7 +72,7 @@ jobs:
           - name: Create Release
             uses: actions/upload-artifact@v4
             with:
-                name: my-temporary-artifacts
+                name: my-temporary-artifacts-win
                 path: target\release\r-gh-create-release.exe
 
     # FOR LINUX
@@ -87,5 +93,5 @@ jobs:
           - name: Create Release
             uses: actions/upload-artifact@v4
             with:
-                name: my-temporary-artifacts
+                name: my-temporary-artifacts-linux
                 path: target/release/r-gh-create-release
