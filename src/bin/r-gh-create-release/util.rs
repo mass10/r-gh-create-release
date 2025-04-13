@@ -149,21 +149,6 @@ impl MatchHelper for getopts::Matches {
 	}
 }
 
-/// utilities for strings.
-pub trait StringUtility {
-	/// get string at index.
-	fn at(&self, index: usize) -> &str;
-}
-
-impl StringUtility for Vec<String> {
-	fn at(&self, index: usize) -> &str {
-		if self.len() <= index {
-			return "";
-		}
-		return &self[index];
-	}
-}
-
 /// Capture by regexpression matching.
 pub fn matches(string_value: &str, expression: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
 	let expression = regex::Regex::new(&expression);
@@ -208,6 +193,7 @@ pub fn matches(string_value: &str, expression: &str) -> Result<Vec<String>, Box<
 #[derive(serde_derive::Deserialize, std::fmt::Debug)]
 pub struct CargoTomlPackage {
 	/// Package name
+	#[allow(unused)]
 	pub name: String,
 	/// Package version
 	pub version: String,
