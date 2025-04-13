@@ -1,14 +1,14 @@
 # r-gh-create-release
 
-A wrapper utility of `gh release`.
+`gh release` ユーティリティーをラップしたツールです。A wrapper utility of `gh release`.
 
 # Getting Started
 
-* Latest versions are available [here](https://github.com/mass10/r-gh-create-release/releases)
+* 実行可能なバイナリファイルを、[こちら](https://github.com/mass10/r-gh-create-release/releases)からダウンロードできます。Latest versions are available [here](https://github.com/mass10/r-gh-create-release/releases)
   * [Portable binary for Windows](https://github.com/mass10/r-gh-create-release/releases/latest/download/r-gh-create-release.exe)
   * [Portable binary for Linux](https://github.com/mass10/r-gh-create-release/releases/latest/download/r-gh-create-release)
 
-# Commandline options.
+# コマンドラインオプションについて Commandline options.
 
 ```
     -h, --help          Show usage.
@@ -25,7 +25,7 @@ A wrapper utility of `gh release`.
         --file ARRAY    string
 ```
 
-# Examples
+# 使い方 Examples
 
 ### Create release with 1 attachment from your main branch.
 * Release notes will be created automatically.
