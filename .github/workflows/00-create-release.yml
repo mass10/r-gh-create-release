@@ -64,7 +64,7 @@ jobs:
 
             # ========== CREATE ARTIFACTS ==========
           - name: Create Release
-            uses: actions/upload-artifact@v3
+            uses: actions/upload-artifact@v4
             with:
                 name: my-temporary-artifacts
                 path: target\release\r-gh-create-release.exe
@@ -85,7 +85,7 @@ jobs:
 
             # ========== CREATE ARTIFACTS ==========
           - name: Create Release
-            uses: actions/upload-artifact@v3
+            uses: actions/upload-artifact@v4
             with:
                 name: my-temporary-artifacts
                 path: target/release/r-gh-create-release
